@@ -248,7 +248,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 dark:bg-[#070a12] text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-300">
+    <div className="min-h-screen bg-slate-100 dark:bg-[#070a12] text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-300 ease-out will-change-transform">
       <Header
         darkMode={darkMode}
         setDarkMode={setDarkMode}
@@ -258,24 +258,24 @@ export default function App() {
         onOpenHelp={() => setIsHelpOpen(true)}
       />
 
-      <main className="flex-1 max-w-xl w-full mx-auto px-4 py-6 space-y-6">
+      <main className="flex-1 max-w-xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
         
         <div className="text-center space-y-3">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 text-xs font-semibold rounded-full">
-            <span>✨ Fast, No-Login School Submissions Portal</span>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 text-xs font-semibold rounded-full transform-gpu transition-all duration-300 hover:scale-105">
+            <span>✨ Fast, Multi-Device Responsive Submissions Portal</span>
           </div>
 
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
             Submit Homework & LOA <br /> Directly to Google Drive
           </h1>
 
-          <p className="text-xs text-slate-600 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
+          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
             Paste the teacher's folder link, enter your name & section, and EasySubmit will organize your personal folder and upload your files directly to Drive.
           </p>
         </div>
 
         {/* Drive Status Warning Card */}
-        <div className="glass-card rounded-2xl p-4 space-y-3">
+        <div className="glass-card rounded-2xl p-4 sm:p-5 space-y-3 transform-gpu transition-all duration-300">
           <div className="flex items-start gap-3">
             <div className="w-9 h-9 rounded-xl bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-white/10 flex items-center justify-center text-amber-500 flex-shrink-0">
               <span className="font-extrabold text-sm">G</span>
@@ -299,7 +299,7 @@ export default function App() {
             <button
               type="button"
               onClick={handleConnectDrive}
-              className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold shadow-md transition"
+              className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold shadow-md active:scale-95 transform-gpu transition-all duration-200"
             >
               Connect Google Drive Account
             </button>
@@ -307,15 +307,15 @@ export default function App() {
         </div>
 
         {/* Step 1 Card */}
-        <div className="glass-card rounded-2xl p-5 space-y-4">
-          <div className="flex items-center justify-between">
+        <div className="glass-card rounded-2xl p-4 sm:p-5 space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-3">
               <div className="w-7 h-7 rounded-lg bg-blue-500/10 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 border border-blue-500/20 dark:border-blue-500/30 flex items-center justify-center font-bold text-xs">
                 1
               </div>
               <div>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white">Teacher's Google Drive Link</h3>
-                <p className="text-[11px] text-slate-600 dark:text-slate-400">Paste the folder link shared by your teacher in your group chat</p>
+                <p className="text-[11px] text-slate-600 dark:text-slate-400">Paste the folder link shared by your teacher</p>
               </div>
             </div>
             <button 
@@ -325,7 +325,7 @@ export default function App() {
                 setDriveInput(demo);
                 handleVerifyFolder(demo);
               }}
-              className="px-2.5 py-1 bg-blue-500/10 dark:bg-blue-900/30 hover:bg-blue-500/20 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 border border-blue-500/20 dark:border-blue-500/30 rounded-lg text-[11px] font-semibold transition"
+              className="px-2.5 py-1 bg-blue-500/10 dark:bg-blue-900/30 hover:bg-blue-500/20 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 border border-blue-500/20 dark:border-blue-500/30 rounded-lg text-[11px] font-semibold transition-all duration-200"
             >
               ✨ Demo Link
             </button>
@@ -341,7 +341,7 @@ export default function App() {
                 setDriveInput(e.target.value);
                 handleVerifyFolder(e.target.value);
               }}
-              className="w-full pl-9 pr-36 py-2.5 bg-white dark:bg-emerald-950/20 border border-slate-300 dark:border-emerald-500/40 rounded-xl text-xs text-slate-900 dark:text-white outline-none focus:border-emerald-500 transition"
+              className="w-full pl-9 pr-36 py-2.5 bg-white dark:bg-emerald-950/20 border border-slate-300 dark:border-emerald-500/40 rounded-xl text-xs text-slate-900 dark:text-white outline-none focus:border-emerald-500 transition-all duration-200"
             />
 
             <div className="absolute right-1.5 flex items-center gap-1">
@@ -349,7 +349,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={handleClearDriveInput}
-                  className="px-2 py-1.5 bg-slate-200 dark:bg-slate-800/80 hover:bg-red-500/10 text-slate-700 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-400 border border-slate-300 dark:border-white/10 rounded-lg text-xs font-semibold flex items-center gap-1 transition"
+                  className="px-2 py-1.5 bg-slate-200 dark:bg-slate-800/80 hover:bg-red-500/10 text-slate-700 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-400 border border-slate-300 dark:border-white/10 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all duration-200"
                 >
                   <X className="w-3 h-3" />
                   <span>Clear</span>
@@ -359,7 +359,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={handlePaste}
-                className="px-3 py-1.5 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-white/10 rounded-lg text-xs font-semibold flex items-center gap-1 transition"
+                className="px-3 py-1.5 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-white/10 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all duration-200"
               >
                 <Clipboard className="w-3 h-3" />
                 <span>Paste</span>
@@ -414,7 +414,7 @@ export default function App() {
                 href={`https://drive.google.com/drive/folders/${activeFolderId}`}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 hover:text-blue-500 transition"
+                className="inline-flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 hover:text-blue-500 transition-colors duration-200"
               >
                 <span>Open full folder in Google Drive</span>
                 <ExternalLink className="w-3 h-3" />
@@ -424,7 +424,7 @@ export default function App() {
         )}
 
         <form onSubmit={handleSubmission} className="space-y-6">
-          <div className="glass-card rounded-2xl p-5 space-y-4">
+          <div className="glass-card rounded-2xl p-4 sm:p-5 space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-7 h-7 rounded-lg bg-blue-500/10 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 border border-blue-500/20 dark:border-blue-500/30 flex items-center justify-center font-bold text-xs">
                 2
@@ -444,7 +444,7 @@ export default function App() {
                   placeholder="e.g. Juan Dela Cruz"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900/80 border border-slate-300 dark:border-white/10 rounded-xl text-slate-900 dark:text-white outline-none focus:border-blue-500 transition"
+                  className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900/80 border border-slate-300 dark:border-white/10 rounded-xl text-slate-900 dark:text-white outline-none focus:border-blue-500 transition-all duration-200"
                 />
                 <span className="text-[10px] text-slate-500 mt-0.5 block">Format: Last Name, First Name</span>
               </div>
@@ -456,7 +456,7 @@ export default function App() {
                   placeholder="e.g. BSBA MM 3A"
                   value={section}
                   onChange={(e) => setSection(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900/80 border border-slate-300 dark:border-white/10 rounded-xl text-slate-900 dark:text-white outline-none focus:border-blue-500 transition"
+                  className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900/80 border border-slate-300 dark:border-white/10 rounded-xl text-slate-900 dark:text-white outline-none focus:border-blue-500 transition-all duration-200"
                 />
               </div>
 
@@ -467,13 +467,13 @@ export default function App() {
                   placeholder="e.g. GGASR"
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900/80 border border-slate-300 dark:border-white/10 rounded-xl text-slate-900 dark:text-white outline-none focus:border-blue-500 transition"
+                  className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900/80 border border-slate-300 dark:border-white/10 rounded-xl text-slate-900 dark:text-white outline-none focus:border-blue-500 transition-all duration-200"
                 />
               </div>
 
               <div className="pt-2">
                 <label className="block text-slate-800 dark:text-slate-200 font-bold mb-2">What are you submitting?</label>
-                <div className="grid grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   {categories.map((cat) => {
                     const IconComp = cat.icon;
                     const isSelected = submissionType === cat.id;
@@ -485,7 +485,7 @@ export default function App() {
                           setSubmissionType(cat.id);
                           if (cat.id === 'LOA Form') setIsLoaModalOpen(true);
                         }}
-                        className={`p-3 rounded-xl border text-left transition flex flex-col justify-between space-y-2 ${
+                        className={`p-3 rounded-xl border text-left flex flex-col justify-between space-y-2 transform-gpu transition-all duration-200 active:scale-98 ${
                           isSelected
                             ? 'bg-blue-500/10 dark:bg-blue-950/60 border-blue-500 shadow-md ring-1 ring-blue-500/50'
                             : 'bg-white dark:bg-slate-900/40 border-slate-200 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/20'
@@ -514,7 +514,7 @@ export default function App() {
                   placeholder={`e.g. ${submissionType} 1 - Midterm Essay`}
                   value={customSubmissionName}
                   onChange={(e) => setCustomSubmissionName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900/80 border border-slate-300 dark:border-white/10 rounded-xl text-slate-900 dark:text-white outline-none focus:border-blue-500 transition"
+                  className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900/80 border border-slate-300 dark:border-white/10 rounded-xl text-slate-900 dark:text-white outline-none focus:border-blue-500 transition-all duration-200"
                 />
               </div>
 
@@ -536,7 +536,7 @@ export default function App() {
             </div>
           </div>
 
-          <div className="glass-card rounded-2xl p-5 space-y-4">
+          <div className="glass-card rounded-2xl p-4 sm:p-5 space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-7 h-7 rounded-lg bg-emerald-500/10 dark:bg-emerald-600/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 dark:border-emerald-500/30 flex items-center justify-center font-bold text-xs">
                 3
@@ -549,7 +549,7 @@ export default function App() {
 
             <div 
               onClick={() => fileInputRef.current && fileInputRef.current.click()}
-              className="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-blue-500 rounded-2xl p-6 text-center space-y-3 relative bg-white/50 dark:bg-slate-900/40 cursor-pointer transition"
+              className="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-blue-500 rounded-2xl p-6 text-center space-y-3 relative bg-white/50 dark:bg-slate-900/40 cursor-pointer transform-gpu transition-all duration-200 hover:scale-[1.01]"
             >
               <input
                 ref={fileInputRef}
@@ -594,7 +594,7 @@ export default function App() {
                   {files.map((file, idx) => (
                     <div
                       key={idx}
-                      className="flex items-center justify-between p-2.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 text-xs shadow-sm"
+                      className="flex items-center justify-between p-2.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 text-xs shadow-sm transform-gpu transition-all duration-150"
                     >
                       <div className="flex items-center gap-2.5 min-w-0 pr-2">
                         <FileText className="w-4 h-4 text-blue-500 flex-shrink-0" />
@@ -607,7 +607,7 @@ export default function App() {
                       <button
                         type="button"
                         onClick={() => handleRemoveFile(idx)}
-                        className="p-1 text-slate-400 hover:text-red-500 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition flex-shrink-0"
+                        className="p-1 text-slate-400 hover:text-red-500 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-150 flex-shrink-0"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -619,7 +619,7 @@ export default function App() {
 
             <button
               type="submit"
-              className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-lg shadow-blue-600/20 transition flex items-center justify-center gap-1.5"
+              className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-lg shadow-blue-600/20 active:scale-98 transform-gpu transition-all duration-200 flex items-center justify-center gap-1.5"
             >
               <span>Submit to Google Drive</span>
               <Send className="w-3.5 h-3.5" />
