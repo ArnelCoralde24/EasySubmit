@@ -276,7 +276,7 @@ export default function App() {
 
         {/* Drive Status Warning Card */}
         <div className="glass-card rounded-2xl p-4 sm:p-5 space-y-3 transform-gpu transition-all duration-300">
-          <div className="flex items-start gap-3">
+          <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-white/10 flex items-center justify-center text-amber-500 flex-shrink-0">
               <span className="font-extrabold text-sm">G</span>
             </div>
@@ -290,20 +290,10 @@ export default function App() {
               <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
                 {accessToken 
                   ? `Connected as: ${user?.name || user?.email || 'Google User'}`
-                  : 'Connect your Google Drive account to submit assignments, view, and organize folders.'}
+                  : 'Click the "Connect Drive" button in the top header bar to sign in.'}
               </p>
             </div>
           </div>
-
-          {!accessToken && (
-            <button
-              type="button"
-              onClick={handleConnectDrive}
-              className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold shadow-md active:scale-95 transform-gpu transition-all duration-200"
-            >
-              Connect Google Drive Account
-            </button>
-          )}
         </div>
 
         {/* Step 1 Card */}
