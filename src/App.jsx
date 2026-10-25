@@ -12,8 +12,7 @@ import SubmissionReceiptModal from './components/SubmissionReceiptModal';
 import HelpModal from './components/HelpModal';
 import { extractFolderId, fetchFolderContents, createDriveFolder, uploadFileToDrive } from './services/driveService';
 
-// I-replace ito ng iyong Google OAuth Client ID mula sa Google Cloud Console
-const GOOGLE_CLIENT_ID = "431007270977-j9h45it3o6fclmko97tttuioovqgb9m0.apps.googleusercontent.com";
+const GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com";
 
 export default function App() {
   const [darkMode, setDarkMode] = useState(() => {
@@ -53,7 +52,6 @@ export default function App() {
   const [uploadError, setUploadError] = useState('');
   const [receiptData, setReceiptData] = useState(null);
 
-  // Sync Dark Mode Class
   useEffect(() => {
     const root = document.documentElement;
     if (darkMode) {
@@ -65,7 +63,6 @@ export default function App() {
     }
   }, [darkMode]);
 
-  // Initialize Google OAuth Token Client
   useEffect(() => {
     if (window.google?.accounts?.oauth2) {
       tokenClientRef.current = window.google.accounts.oauth2.initTokenClient({
@@ -74,12 +71,11 @@ export default function App() {
         callback: async (response) => {
           if (response.error) {
             console.error(response);
-            alert('Nabigo ang Google Auth Connection.');
+            alert('Google Auth Connection failed.');
             return;
           }
           if (response.access_token) {
             setAccessToken(response.access_token);
-            // Fetch Basic User Profile Info
             try {
               const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
                 headers: { Authorization: `Bearer ${response.access_token}` }
@@ -95,12 +91,11 @@ export default function App() {
     }
   }, []);
 
-  // Trigger Google Login Popup
   const handleConnectDrive = () => {
     if (tokenClientRef.current) {
       tokenClientRef.current.requestAccessToken({ prompt: 'consent' });
     } else {
-      alert('Iniloload pa ang Google SDK script. Pakisubukan ulit sa ilang sandali.');
+      alert('Google SDK script is still loading. Please try again in a moment.');
     }
   };
 
@@ -140,7 +135,7 @@ export default function App() {
       setDriveInput(text);
       handleVerifyFolder(text);
     } catch (err) {
-      alert('Kailangan ng clipboard permission sa browser.');
+      alert('Clipboard permission is required by your browser.');
     }
   };
 
@@ -168,12 +163,12 @@ export default function App() {
   const handleSubmission = async (e) => {
     e.preventDefault();
     if (!activeFolderId) {
-      alert('Maglagay muna ng valid na Google Drive link.');
+      alert('Please enter or verify a valid Google Drive link first.');
       return;
     }
 
     if (files.length === 0 && !loaData?.generatedFile) {
-      alert('Pumili muna ng kahit isang file para sa submission.');
+      alert('Please select at least one file to submit.');
       return;
     }
 
@@ -192,7 +187,12 @@ export default function App() {
 
       if (accessToken) {
         const mainFolder = await createDriveFolder(finalFolderName, activeFolderId, accessToken);
-        const studentFolderName = `[${section.trim() || 'SECTION'}] ${fullName.trim() || 'Student Name'}`;
+        
+        const studentLabel = fullName.trim() || 'Student Name';
+        const studentFolderName = section.trim()
+          ? `[${section.trim()}] ${studentLabel}`
+          : studentLabel;
+
         const studentFolder = await createDriveFolder(studentFolderName, mainFolder.id, accessToken);
         targetFolderId = studentFolder.id;
       }
@@ -219,7 +219,7 @@ export default function App() {
       setReceiptData({
         receiptId: `ES-${dateStr}-${randomStr}`,
         fullName,
-        section,
+        section: section.trim() || 'N/A',
         submissionType: finalFolderName,
         timestamp: new Date().toLocaleString(),
         files: uploadedResults,
@@ -233,7 +233,7 @@ export default function App() {
         loadFolderItems(activeFolderId);
       }
     } catch (err) {
-      setUploadError(err.message || 'Nagkaroon ng error habang nag-uupload.');
+      setUploadError(err.message || 'An error occurred during upload.');
     } finally {
       setIsUploading(false);
     }
@@ -270,7 +270,7 @@ export default function App() {
           </h1>
 
           <p className="text-xs text-slate-600 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
-            I-paste ang folder link ng guro, ilagay ang iyong pangalan at section, at ire-organize ng EasySubmit ang iyong submission papunta sa Drive.
+            Paste the teacher's folder link, enter your name & section, and EasySubmit will organize your personal folder and upload your files directly to Drive.
           </p>
         </div>
 
@@ -289,8 +289,8 @@ export default function App() {
               </div>
               <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
                 {accessToken 
-                  ? `Naka-connect kay: ${user?.name || user?.email || 'Google User'}`
-                  : 'I-connect ang Google Drive account para makapag-submit at ma-view ang contents ng folder.'}
+                  ? `Connected as: ${user?.name || user?.email || 'Google User'}`
+                  : 'Connect your Google Drive account to submit assignments, view, and organize folders.'}
               </p>
             </div>
           </div>
@@ -315,7 +315,7 @@ export default function App() {
               </div>
               <div>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white">Teacher's Google Drive Link</h3>
-                <p className="text-[11px] text-slate-600 dark:text-slate-400">I-paste ang shared folder link ng iyong guro</p>
+                <p className="text-[11px] text-slate-600 dark:text-slate-400">Paste the folder link shared by your teacher in your group chat</p>
               </div>
             </div>
             <button 
@@ -373,7 +373,7 @@ export default function App() {
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 <span>Drive Folder Detected</span>
               </div>
-              <p className="text-[10px] text-emerald-600 dark:text-emerald-400/80">🔒 Handang magtanggap ng uploads</p>
+              <p className="text-[10px] text-emerald-600 dark:text-emerald-400/80">🔒 Ready for uploads</p>
             </div>
           )}
         </div>
@@ -416,7 +416,7 @@ export default function App() {
                 rel="noreferrer"
                 className="inline-flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 hover:text-blue-500 transition"
               >
-                <span>I-open ang buong folder sa Google Drive</span>
+                <span>Open full folder in Google Drive</span>
                 <ExternalLink className="w-3 h-3" />
               </a>
             </div>
@@ -431,7 +431,7 @@ export default function App() {
               </div>
               <div>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white">Student & Submission Info</h3>
-                <p className="text-[11px] text-slate-600 dark:text-slate-400">Gagamitin ang pangalan at section sa ililikhang folder</p>
+                <p className="text-[11px] text-slate-600 dark:text-slate-400">EasySubmit creates your personal folder using your info</p>
               </div>
             </div>
 
@@ -446,14 +446,13 @@ export default function App() {
                   onChange={(e) => setFullName(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900/80 border border-slate-300 dark:border-white/10 rounded-xl text-slate-900 dark:text-white outline-none focus:border-blue-500 transition"
                 />
-                <span className="text-[10px] text-slate-500 mt-0.5 block">Format: Apelyido, Pangalan</span>
+                <span className="text-[10px] text-slate-500 mt-0.5 block">Format: Last Name, First Name</span>
               </div>
 
               <div>
-                <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">🏫 Class Section / Year *</label>
+                <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">🏫 Class Section / Year (Optional)</label>
                 <input
                   type="text"
-                  required
                   placeholder="e.g. BSBA MM 3A"
                   value={section}
                   onChange={(e) => setSection(e.target.value)}
@@ -473,7 +472,7 @@ export default function App() {
               </div>
 
               <div className="pt-2">
-                <label className="block text-slate-800 dark:text-slate-200 font-bold mb-2">Ano ang iyong ipapasa?</label>
+                <label className="block text-slate-800 dark:text-slate-200 font-bold mb-2">What are you submitting?</label>
                 <div className="grid grid-cols-2 gap-2.5">
                   {categories.map((cat) => {
                     const IconComp = cat.icon;
@@ -522,7 +521,7 @@ export default function App() {
               <div className="p-3 bg-slate-200/50 dark:bg-slate-900/60 rounded-xl border border-slate-300 dark:border-white/5 space-y-2">
                 <span className="text-[11px] text-slate-600 dark:text-slate-400 font-semibold flex items-center gap-1">
                   <Folder className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                  Folder Structure na Malilikha sa Drive:
+                  Folder Structure That Will Be Created in Drive:
                 </span>
                 <div className="pl-2 space-y-1 font-mono text-[11px]">
                   <p className="text-slate-500 dark:text-slate-400">Teacher's Drive &gt;</p>
@@ -530,7 +529,7 @@ export default function App() {
                     📁 {customSubmissionName.trim() || submissionType}
                   </p>
                   <p className="text-blue-500 dark:text-blue-400 pl-6">
-                    📁 [{section || 'SECTION'}] {fullName || 'Student Name'}
+                    📁 {section.trim() ? `[${section.trim()}] ` : ''}{fullName || 'Student Name'}
                   </p>
                 </div>
               </div>
@@ -544,7 +543,7 @@ export default function App() {
               </div>
               <div>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white">Select School Files</h3>
-                <p className="text-[11px] text-slate-600 dark:text-slate-400">I-drag & drop o i-click para pumili ng files</p>
+                <p className="text-[11px] text-slate-600 dark:text-slate-400">Drag & drop or tap to choose files from your device</p>
               </div>
             </div>
 
@@ -563,8 +562,8 @@ export default function App() {
                 <UploadCloud className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-xs font-bold text-slate-800 dark:text-white">I-drag at i-drop ang assignments dito</p>
-                <p className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline">o mag-browse mula sa phone / storage</p>
+                <p className="text-xs font-bold text-slate-800 dark:text-white">Drag and drop your assignments here</p>
+                <p className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline">or browse from your phone / storage</p>
               </div>
 
               <div className="flex flex-wrap justify-center gap-1.5 pt-1">
@@ -580,7 +579,7 @@ export default function App() {
               <div className="space-y-2 pt-2">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-bold text-slate-700 dark:text-slate-300">
-                    Mga Napiling Files ({files.length})
+                    Selected Files ({files.length})
                   </span>
                   <button
                     type="button"
