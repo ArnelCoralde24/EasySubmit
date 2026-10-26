@@ -21,7 +21,7 @@ export const fetchFolderContents = async (folderId, accessToken) => {
 
   try {
     const query = encodeURIComponent(`'${folderId}' in parents and trashed = false`);
-    const fields = encodeURIComponent('files(id, name, mimeType, webViewLink, iconLink, thumbnailLink, createdTime, size)');
+    const fields = encodeURIComponent('files(id, name, mimeType, webViewLink, iconLink, thumbnailLink, createdTime, size, owners)');
     const url = `${DRIVE_API_BASE}/files?q=${query}&fields=${fields}&pageSize=1000&includeItemsFromAllDrives=true&supportsAllDrives=true`;
 
     const response = await fetch(url, {

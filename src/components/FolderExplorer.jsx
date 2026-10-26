@@ -11,7 +11,8 @@ export default function FolderExplorer({
   onDeleteItem,
   onAddFilesToFolder,
   isLoading,
-  myCreatedIds = []
+  myCreatedIds = [],
+  currentUserEmail
 }) {
   const fileInputRef = useRef(null);
   const [isUploadingInside, setIsUploadingInside] = useState(false);
@@ -97,7 +98,11 @@ export default function FolderExplorer({
         <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
           {folderContents.map((item) => {
             const isFolder = item.mimeType === 'application/vnd.google-apps.folder';
-            const isMine = myCreatedIds.includes(item.id);
+            
+            const isOwnerByEmail = currentUserEmail && item.owners?.some(
+              (owner) => owner.emailAddress?.toLowerCase() === currentUserEmail.toLowerCase()
+            );
+            const isMine = isOwnerByEmail || myCreatedIds.includes(item.id);
 
             return (
               <div

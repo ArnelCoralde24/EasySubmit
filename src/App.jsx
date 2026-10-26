@@ -107,7 +107,7 @@ export default function App() {
     if (window.google?.accounts?.oauth2) {
       tokenClientRef.current = window.google.accounts.oauth2.initTokenClient({
         client_id: GOOGLE_CLIENT_ID,
-        scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/userinfo.profile',
+        scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email',
         callback: async (response) => {
           if (response.error) {
             console.error(response);
@@ -188,11 +188,6 @@ export default function App() {
 
   const handleDeleteItem = async (itemId) => {
     if (!accessToken) return;
-
-    if (!myCreatedIds.includes(itemId)) {
-      alert("Security Protection: Ang sarili mong in-upload o ginawang folder lamang ang pwede mong burahin.");
-      return;
-    }
 
     setFolderContents((prev) => prev.filter((item) => item.id !== itemId));
     setMyCreatedIds((prev) => prev.filter((id) => id !== itemId));
@@ -667,6 +662,7 @@ export default function App() {
                   onAddFilesToFolder={handleAddFilesToFolder}
                   isLoading={isLoadingContents}
                   myCreatedIds={myCreatedIds}
+                  currentUserEmail={user?.email}
                 />
               </div>
             )}
