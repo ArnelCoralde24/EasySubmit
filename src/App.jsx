@@ -3,7 +3,7 @@ import {
   Folder, UploadCloud, Send, CheckCircle2, Link2, Clipboard, X,
   BookOpen, FileCheck, Package, ExternalLink, ShieldAlert, History,
   FileText, Trash2, Edit3, Users, RefreshCw, MinusCircle, Home,
-  FolderOpen, HardDrive, Settings, Moon, Sun, User, Lock, Smartphone, KeyRound
+  FolderOpen, HardDrive, Settings, User, Lock, Smartphone, KeyRound
 } from "lucide-react";
 import FolderExplorer from "./components/FolderExplorer";
 import UploadProgressModal from './components/UploadProgressModal';
@@ -20,11 +20,6 @@ import {
 const GOOGLE_CLIENT_ID = "431007270977-j9h45it3o6fclmko97tttuioovqgb9m0.apps.googleusercontent.com";
 
 export default function App() {
-  const [darkMode, setDarkMode] = useState(() => {
-    const savedTheme = localStorage.getItem('theme');
-    return savedTheme ? savedTheme === 'dark' : true;
-  });
-
   const fileInputRef = useRef(null);
   const tokenClientRef = useRef(null);
 
@@ -68,6 +63,10 @@ export default function App() {
   const [receiptData, setReceiptData] = useState(null);
 
   useEffect(() => {
+    document.documentElement.classList.add('dark');
+  }, []);
+
+  useEffect(() => {
     if (isHelpOpen || receiptData || isUploading) {
       document.body.style.overflow = 'hidden';
       window.scrollTo({ top: 0, behavior: 'instant' });
@@ -82,17 +81,6 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('easysubmit_my_ids', JSON.stringify(myCreatedIds));
   }, [myCreatedIds]);
-
-  useEffect(() => {
-    const root = document.documentElement;
-    if (darkMode) {
-      root.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      root.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [darkMode]);
 
   useEffect(() => {
     if (window.google?.accounts?.oauth2) {
@@ -179,6 +167,11 @@ export default function App() {
 
   const handleDeleteItem = async (itemId) => {
     if (!accessToken) return;
+    if (!myCreatedIds.includes(itemId)) {
+      alert("Security Error: You can only delete folders/files created by your device.");
+      return;
+    }
+
     setFolderContents((prev) => prev.filter((item) => item.id !== itemId));
     setMyCreatedIds((prev) => prev.filter((id) => id !== itemId));
 
@@ -216,7 +209,7 @@ export default function App() {
       await loadFolderItems(targetFolderId);
     } catch (err) {
       setUploadError(err.message || 'Error uploading file');
-    } finally {
+    } fontally {
       setIsUploading(false);
     }
   };
@@ -355,14 +348,6 @@ export default function App() {
     }
   };
 
-  const formatFileSize = (bytes) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
   return (
     <div className="min-h-screen w-full bg-[#050814] text-white flex flex-col font-sans relative overflow-x-hidden">
       
@@ -398,14 +383,6 @@ export default function App() {
 
         {/* Header Right Actions */}
         <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setDarkMode(!darkMode)}
-            className="p-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-slate-300 transition"
-          >
-            {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-          </button>
-
           {accessToken ? (
             <div className="flex items-center gap-2.5 bg-blue-950/60 border border-blue-500/30 px-3 py-1.5 rounded-2xl">
               <div className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold text-xs">
