@@ -248,7 +248,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 dark:bg-[#070a12] text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-300 ease-out will-change-transform">
+    <div className="min-h-screen w-full overflow-x-hidden bg-slate-100 dark:bg-[#070a12] text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-300 ease-out will-change-transform">
       <Header
         darkMode={darkMode}
         setDarkMode={setDarkMode}

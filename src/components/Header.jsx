@@ -1,56 +1,65 @@
 import React from 'react';
-import { Sun, Moon, HelpCircle, LogIn, LogOut, CheckCircle2, ShieldCheck, Download, CloudUpload } from 'lucide-react';
+import { Sun, Moon, HelpCircle, LogOut } from 'lucide-react';
 
 export default function Header({ darkMode, setDarkMode, user, onSignIn, onSignOut, onOpenHelp }) {
   return (
-    <header className="sticky top-0 z-40 w-full bg-[#0b0f19]/80 backdrop-blur-md border-b border-white/10">
-      <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+    <header className="sticky top-0 z-40 w-full backdrop-blur-md bg-white/70 dark:bg-[#070a12]/80 border-b border-slate-200 dark:border-white/10 transition-colors duration-200">
+      <div className="max-w-xl mx-auto px-3 sm:px-4 py-3 flex items-center justify-between gap-2">
         
-        {/* Brand Logo & Tag */}
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/30">
-            <CloudUpload className="w-5 h-5" />
+        {/* Logo */}
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-extrabold text-sm shadow-md shadow-blue-500/30 flex-shrink-0">
+            ES
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xl font-black tracking-tight text-white">EasySubmit</span>
-            <span className="px-2 py-0.5 text-[10px] font-bold uppercase bg-blue-900/60 text-blue-400 border border-blue-500/30 rounded-md">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="font-extrabold text-base tracking-tight text-slate-900 dark:text-white truncate">
+              EasySubmit
+            </span>
+            <span className="hidden xs:inline-block px-1.5 py-0.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold text-[10px] rounded-md border border-blue-500/20">
               DRIVE
             </span>
           </div>
         </div>
 
-        {/* Action Controls */}
-        <div className="flex items-center gap-2">
+        {/* Actions */}
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
           <button
             onClick={() => setDarkMode(!darkMode)}
-            className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-white/5 transition"
+            className="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-slate-800 rounded-xl transition"
+            title="Toggle theme"
           >
-            {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4" />}
+            {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-700" />}
           </button>
 
           <button
             onClick={onOpenHelp}
-            className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-white/5 transition"
+            className="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-slate-800 rounded-xl transition"
+            title="How it works"
           >
             <HelpCircle className="w-4 h-4" />
           </button>
 
-          <div className="h-4 w-[1px] bg-white/10 mx-1" />
-
           {user ? (
-            <button
-              onClick={onSignOut}
-              className="flex items-center gap-2 px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-xl text-xs font-semibold transition"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span>Sign Out</span>
-            </button>
+            <div className="flex items-center gap-1.5">
+              <span className="hidden sm:inline-block text-xs font-semibold text-slate-700 dark:text-slate-200 truncate max-w-[100px]">
+                {user.name || 'User'}
+              </span>
+              <button
+                onClick={onSignOut}
+                className="p-2 text-red-500 hover:bg-red-500/10 rounded-xl transition"
+                title="Sign out"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
           ) : (
             <button
               onClick={onSignIn}
-              className="flex items-center gap-2 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-blue-600/30 transition"
+              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-md shadow-blue-600/20 transition active:scale-95 flex items-center gap-1.5"
             >
-              <div className="w-4 h-4 rounded-full bg-white text-blue-600 flex items-center justify-center font-bold text-[10px]">G</div>
+              <span className="w-4 h-4 rounded-full bg-white text-blue-600 font-black text-[10px] flex items-center justify-center">
+                G
+              </span>
               <span>Connect Drive</span>
             </button>
           )}
