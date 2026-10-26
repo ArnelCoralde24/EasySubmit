@@ -186,15 +186,17 @@ export default function App() {
       const finalFolderName = customSubmissionName.trim() || submissionType;
 
       if (accessToken) {
-        const mainFolder = await createDriveFolder(finalFolderName, activeFolderId, accessToken);
-        
+        // 1. Una munang lilikhain ang Student / Section Folder sa loob ng Teacher's Drive
         const studentLabel = fullName.trim() || 'Student Name';
         const studentFolderName = section.trim()
           ? `[${section.trim()}] ${studentLabel}`
           : studentLabel;
 
-        const studentFolder = await createDriveFolder(studentFolderName, mainFolder.id, accessToken);
-        targetFolderId = studentFolder.id;
+        const studentFolder = await createDriveFolder(studentFolderName, activeFolderId, accessToken);
+
+        // 2. Isusunod ang Submission / Activity Subfolder sa loob ng Student Folder
+        const submissionFolder = await createDriveFolder(finalFolderName, studentFolder.id, accessToken);
+        targetFolderId = submissionFolder.id;
       }
 
       const uploadedResults = [];
@@ -516,10 +518,10 @@ export default function App() {
                 <div className="pl-2 space-y-1 font-mono text-[11px]">
                   <p className="text-slate-500 dark:text-slate-400">Teacher's Drive &gt;</p>
                   <p className="text-blue-600 dark:text-blue-300 pl-3">
-                    📁 {customSubmissionName.trim() || submissionType}
+                    📁 {section.trim() ? `[${section.trim()}] ` : ''}{fullName || 'Student Name'}
                   </p>
                   <p className="text-blue-500 dark:text-blue-400 pl-6">
-                    📁 {section.trim() ? `[${section.trim()}] ` : ''}{fullName || 'Student Name'}
+                    📁 {customSubmissionName.trim() || submissionType}
                   </p>
                 </div>
               </div>
