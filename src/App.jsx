@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import { 
   Folder, UploadCloud, Send, CheckCircle2, Link2, Clipboard, X,
-  BookOpen, Stethoscope, FileCheck, Package, ExternalLink, ShieldAlert, History,
+  BookOpen, FileCheck, Package, ExternalLink, ShieldAlert, History,
   FileText, Trash2, Edit3, Users, RefreshCw, MinusCircle
 } from "lucide-react";
 import Header from "./components/Header";
 import FolderExplorer from "./components/FolderExplorer";
-import LOAModal from './components/LOAModal';
 import UploadProgressModal from './components/UploadProgressModal';
 import SubmissionReceiptModal from './components/SubmissionReceiptModal';
 import HelpModal from './components/HelpModal';
@@ -59,9 +58,7 @@ export default function App() {
   const [customSubmissionName, setCustomSubmissionName] = useState('');
 
   const [files, setFiles] = useState([]);
-  const [loaData, setLoaData] = useState(null);
 
-  const [isLoaModalOpen, setIsLoaModalOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -258,19 +255,23 @@ export default function App() {
   const categories = [
     { id: 'None', title: 'None (Direct to Name Folder)', sub: 'Direct upload to student folder', icon: MinusCircle },
     { id: 'Assignment', title: 'Assignment', sub: '/Assignments', icon: BookOpen },
-    { id: 'LOA Form', title: 'LOA / Excuse Letter', sub: '/LOA (Letter of Absenc...', icon: Stethoscope },
     { id: 'Activity', title: 'Activity / Worksheet', sub: '/Activities', icon: FileCheck },
     { id: 'Project', title: 'Project / PETA', sub: '/Projects', icon: Package },
   ];
 
   const handleSubmission = async (e) => {
     e.preventDefault();
+    if (!accessToken) {
+      alert('Please connect your Google Drive account first.');
+      return;
+    }
+
     if (!activeFolderId) {
       alert('Please enter or verify a valid Google Drive link first.');
       return;
     }
 
-    if (files.length === 0 && !loaData?.generatedFile) {
+    if (files.length === 0) {
       alert('Please select at least one file to submit.');
       return;
     }
@@ -280,10 +281,6 @@ export default function App() {
     setCompletedCount(0);
 
     const allFilesToUpload = [...files];
-    if (loaData?.generatedFile) {
-      allFilesToUpload.unshift(loaData.generatedFile);
-    }
-
     const createdIdsThisSession = [];
 
     try {
@@ -341,7 +338,6 @@ export default function App() {
       });
 
       setFiles([]);
-      setLoaData(null);
 
       if (accessToken && (currentFolderId || activeFolderId)) {
         loadFolderItems(currentFolderId || activeFolderId);
@@ -380,7 +376,7 @@ export default function App() {
           </div>
 
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
-            Submit Homework & LOA <br /> Directly to Google Drive
+            Submit Homework <br /> Directly to Google Drive
           </h1>
 
           <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
@@ -591,10 +587,7 @@ export default function App() {
                       <button
                         key={cat.id}
                         type="button"
-                        onClick={() => {
-                          setSubmissionType(cat.id);
-                          if (cat.id === 'LOA Form') setIsLoaModalOpen(true);
-                        }}
+                        onClick={() => setSubmissionType(cat.id)}
                         className={`p-3 rounded-xl border text-left flex flex-col justify-between space-y-2 transform-gpu transition-all duration-200 active:scale-98 ${
                           isSelected
                             ? 'bg-blue-500/10 dark:bg-blue-950/60 border-blue-500 shadow-md ring-1 ring-blue-500/50'
@@ -731,16 +724,21 @@ export default function App() {
 
             <button
               type="submit"
-              className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-lg shadow-blue-600/20 active:scale-98 transform-gpu transition-all duration-200 flex items-center justify-center gap-1.5"
+              disabled={!accessToken}
+              className={`w-full py-3 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transform-gpu transition-all duration-200 ${
+                accessToken
+                  ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20 active:scale-98 cursor-pointer'
+                  : 'bg-slate-300 dark:bg-slate-800 text-slate-500 dark:text-slate-500 cursor-not-allowed opacity-60'
+              }`}
             >
-              <span>Submit to Google Drive</span>
+              <span>{accessToken ? 'Submit to Google Drive' : 'Please Connect Drive to Submit'}</span>
               <Send className="w-3.5 h-3.5" />
             </button>
           </div>
         </form>
 
         <footer className="text-center space-y-1.5 pt-4 text-xs text-slate-500">
-          <p className="font-semibold text-slate-600 dark:text-slate-400">EasySubmit • Direct School & LOA Submission Portal</p>
+          <p className="font-semibold text-slate-600 dark:text-slate-400">EasySubmit • Direct School Submission Portal</p>
           <p className="inline-block px-3 py-1 bg-slate-200 dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-white/5 rounded-full text-[11px]">
             Created By NatsumiKieko
           </p>
@@ -748,12 +746,6 @@ export default function App() {
 
       </main>
 
-      <LOAModal
-        isOpen={isLoaModalOpen}
-        onClose={() => setIsLoaModalOpen(false)}
-        onSave={(data) => setLoaData(data)}
-        studentInfo={{ fullName, section, studentId, subject }}
-      />
       <UploadProgressModal
         isOpen={isUploading}
         currentFileName={currentUploadingFile}
