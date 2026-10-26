@@ -12,7 +12,7 @@ import SubmissionReceiptModal from './components/SubmissionReceiptModal';
 import HelpModal from './components/HelpModal';
 import { extractFolderId, fetchFolderContents, createDriveFolder, uploadFileToDrive } from './services/driveService';
 
-const GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com";
+const GOOGLE_CLIENT_ID = "431007270977-j9h45it3o6fclmko97tttuioovqgb9m0.apps.googleusercontent.com";
 
 export default function App() {
   const [darkMode, setDarkMode] = useState(() => {
