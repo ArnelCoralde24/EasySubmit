@@ -69,6 +69,12 @@ export default function App() {
   const [receiptData, setReceiptData] = useState(null);
 
   useEffect(() => {
+    if (isHelpOpen || receiptData) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [isHelpOpen, receiptData]);
+
+  useEffect(() => {
     localStorage.setItem('easysubmit_my_ids', JSON.stringify(myCreatedIds));
   }, [myCreatedIds]);
 
@@ -739,9 +745,14 @@ export default function App() {
 
         <footer className="text-center space-y-1.5 pt-4 text-xs text-slate-500">
           <p className="font-semibold text-slate-600 dark:text-slate-400">EasySubmit • Direct School Submission Portal</p>
-          <p className="inline-block px-3 py-1 bg-slate-200 dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-white/5 rounded-full text-[11px]">
+          <a
+            href="https://www.facebook.com/arnelcoraldeMA"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block px-3 py-1 bg-slate-200 dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-white/5 rounded-full text-[11px] hover:text-blue-500 transition-colors duration-200"
+          >
             Created By NatsumiKieko
-          </p>
+          </a>
         </footer>
 
       </main>
