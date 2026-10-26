@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { 
   Folder, UploadCloud, Send, CheckCircle2, Link2, Clipboard, X,
   BookOpen, Stethoscope, FileCheck, Package, ExternalLink, ShieldAlert, History,
-  FileText, Trash2, Edit3, Users, RefreshCw
+  FileText, Trash2, Edit3, Users, RefreshCw, MinusCircle
 } from "lucide-react";
 import Header from "./components/Header";
 import FolderExplorer from "./components/FolderExplorer";
@@ -15,15 +15,24 @@ import { extractFolderId, fetchFolderContents, createDriveFolder, uploadFileToDr
 const GOOGLE_CLIENT_ID = "431007270977-j9h45it3o6fclmko97tttuioovqgb9m0.apps.googleusercontent.com";
 
 export default function App() {
+  // 1. DEFAULT DARK MODE SETUP
   const [darkMode, setDarkMode] = useState(() => {
-    return localStorage.getItem('theme') === 'dark';
+    const savedTheme = localStorage.getItem('theme');
+    return savedTheme ? savedTheme === 'dark' : true; // Default to TRUE (Dark Mode)
   });
 
   const fileInputRef = useRef(null);
   const tokenClientRef = useRef(null);
 
-  const [user, setUser] = useState(null);
-  const [accessToken, setAccessToken] = useState(null);
+  // 2. PERSISTENT GOOGLE LOGIN (SESSIONSTORAGE)
+  const [user, setUser] = useState(() => {
+    const savedUser = sessionStorage.getItem('easysubmit_user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+
+  const [accessToken, setAccessToken] = useState(() => {
+    return sessionStorage.getItem('easysubmit_token') || null;
+  });
 
   const [driveInput, setDriveInput] = useState('');
   const [activeFolderId, setActiveFolderId] = useState('');
@@ -37,6 +46,7 @@ export default function App() {
   const [subject, setSubject] = useState('');
   const [studentId, setStudentId] = useState('');
   
+  // Default submission type is set to 'Assignment'
   const [submissionType, setSubmissionType] = useState('Assignment');
   const [customSubmissionName, setCustomSubmissionName] = useState('');
 
@@ -64,6 +74,7 @@ export default function App() {
     }
   }, [darkMode]);
 
+  // Google OAuth Initialization & Token Persistence
   useEffect(() => {
     if (window.google?.accounts?.oauth2) {
       tokenClientRef.current = window.google.accounts.oauth2.initTokenClient({
@@ -77,14 +88,19 @@ export default function App() {
           }
           if (response.access_token) {
             setAccessToken(response.access_token);
+            sessionStorage.setItem('easysubmit_token', response.access_token);
+
             try {
               const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
                 headers: { Authorization: `Bearer ${response.access_token}` }
               });
               const userData = await res.json();
               setUser(userData);
+              sessionStorage.setItem('easysubmit_user', JSON.stringify(userData));
             } catch (err) {
-              setUser({ name: 'Connected User' });
+              const fallbackUser = { name: 'Connected User' };
+              setUser(fallbackUser);
+              sessionStorage.setItem('easysubmit_user', JSON.stringify(fallbackUser));
             }
           }
         },
@@ -94,10 +110,17 @@ export default function App() {
 
   const handleConnectDrive = () => {
     if (tokenClientRef.current) {
-      tokenClientRef.current.requestAccessToken({ prompt: 'consent' });
+      tokenClientRef.current.requestAccessToken({ prompt: '' }); // Fast reconnect without consent prompt every time
     } else {
       alert('Google SDK script is still loading. Please try again in a moment.');
     }
+  };
+
+  const handleSignOut = () => {
+    setUser(null);
+    setAccessToken(null);
+    sessionStorage.removeItem('easysubmit_token');
+    sessionStorage.removeItem('easysubmit_user');
   };
 
   const loadFolderItems = async (targetId, silent = false) => {
@@ -113,7 +136,7 @@ export default function App() {
     }
   };
 
-  // Real-time Auto Refresh (Polling tuwing 5 segundo)
+  // Real-time Auto Refresh (Polling every 5s)
   useEffect(() => {
     const targetFolder = currentFolderId || activeFolderId;
     if (targetFolder && accessToken) {
@@ -175,7 +198,9 @@ export default function App() {
     setBreadcrumbs([{ id, name: 'Root Folder' }]);
   };
 
+  // 3. ADDED "NONE" OPTION TO CATEGORIES
   const categories = [
+    { id: 'None', title: 'None (Direct to Name Folder)', sub: 'Direct upload to student folder', icon: MinusCircle },
     { id: 'Assignment', title: 'Assignment', sub: '/Assignments', icon: BookOpen },
     { id: 'LOA Form', title: 'LOA / Excuse Letter', sub: '/LOA (Letter of Absenc...', icon: Stethoscope },
     { id: 'Activity', title: 'Activity / Worksheet', sub: '/Activities', icon: FileCheck },
@@ -208,14 +233,23 @@ export default function App() {
       const finalFolderName = customSubmissionName.trim() || submissionType;
 
       if (accessToken) {
+        // 1. Create Student Folder inside Teacher's Drive
         const studentLabel = fullName.trim() || 'Student Name';
         const studentFolderName = section.trim()
           ? `[${section.trim()}] ${studentLabel}`
           : studentLabel;
 
         const studentFolder = await createDriveFolder(studentFolderName, activeFolderId, accessToken);
-        const submissionFolder = await createDriveFolder(finalFolderName, studentFolder.id, accessToken);
-        targetFolderId = submissionFolder.id;
+        
+        // 2. Check if 'None' category is selected
+        if (submissionType === 'None' && !customSubmissionName.trim()) {
+          // Direct upload into Student Folder
+          targetFolderId = studentFolder.id;
+        } else {
+          // Create Activity / Submission Subfolder inside Student Folder
+          const submissionFolder = await createDriveFolder(finalFolderName, studentFolder.id, accessToken);
+          targetFolderId = submissionFolder.id;
+        }
       }
 
       const uploadedResults = [];
@@ -241,7 +275,7 @@ export default function App() {
         receiptId: `ES-${dateStr}-${randomStr}`,
         fullName,
         section: section.trim() || 'N/A',
-        submissionType: finalFolderName,
+        submissionType: submissionType === 'None' && !customSubmissionName.trim() ? 'Direct Upload' : finalFolderName,
         timestamp: new Date().toLocaleString(),
         files: uploadedResults,
         folderUrl: `https://drive.google.com/drive/folders/${targetFolderId}`,
@@ -250,7 +284,7 @@ export default function App() {
       setFiles([]);
       setLoaData(null);
 
-      // Refresh real-time
+      // Refresh list in real-time
       if (accessToken && (currentFolderId || activeFolderId)) {
         loadFolderItems(currentFolderId || activeFolderId);
       }
@@ -276,7 +310,7 @@ export default function App() {
         setDarkMode={setDarkMode}
         user={user}
         onSignIn={handleConnectDrive}
-        onSignOut={() => { setUser(null); setAccessToken(null); }}
+        onSignOut={handleSignOut}
         onOpenHelp={() => setIsHelpOpen(true)}
       />
 
@@ -529,13 +563,14 @@ export default function App() {
                 </label>
                 <input
                   type="text"
-                  placeholder={`e.g. ${submissionType} 1 - Midterm Essay`}
+                  placeholder={`e.g. ${submissionType === 'None' ? 'Activity Name' : submissionType} 1 - Midterm Essay`}
                   value={customSubmissionName}
                   onChange={(e) => setCustomSubmissionName(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900/80 border border-slate-300 dark:border-white/10 rounded-xl text-slate-900 dark:text-white outline-none focus:border-blue-500 transition-all duration-200"
                 />
               </div>
 
+              {/* Dynamic Folder Structure Preview */}
               <div className="p-3 bg-slate-200/50 dark:bg-slate-900/60 rounded-xl border border-slate-300 dark:border-white/5 space-y-2">
                 <span className="text-[11px] text-slate-600 dark:text-slate-400 font-semibold flex items-center gap-1">
                   <Folder className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
@@ -546,9 +581,11 @@ export default function App() {
                   <p className="text-blue-600 dark:text-blue-300 pl-3">
                     📁 {section.trim() ? `[${section.trim()}] ` : ''}{fullName || 'Student Name'}
                   </p>
-                  <p className="text-blue-500 dark:text-blue-400 pl-6">
-                    📁 {customSubmissionName.trim() || submissionType}
-                  </p>
+                  {(submissionType !== 'None' || customSubmissionName.trim()) && (
+                    <p className="text-blue-500 dark:text-blue-400 pl-6">
+                      📁 {customSubmissionName.trim() || submissionType}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
