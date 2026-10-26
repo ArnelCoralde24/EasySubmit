@@ -17,25 +17,32 @@ export const extractFolderId = (urlOrId) => {
 };
 
 export const fetchFolderContents = async (folderId, accessToken) => {
-  const query = `'${folderId}' in parents and trashed = false`;
-  const fields = 'files(id, name, mimeType, webViewLink, iconLink, thumbnailLink, createdTime, size)';
-  const url = `${DRIVE_API_BASE}/files?q=${encodeURIComponent(query)}&fields=${encodeURIComponent(fields)}&pageSize=1000&includeItemsFromAllDrives=true&supportsAllDrives=true`;
+  if (!folderId || !accessToken) return [];
 
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache'
-    },
-  });
+  try {
+    const query = encodeURIComponent(`'${folderId}' in parents and trashed = false`);
+    const fields = encodeURIComponent('files(id, name, mimeType, webViewLink, iconLink, thumbnailLink, createdTime, size)');
+    const url = `${DRIVE_API_BASE}/files?q=${query}&fields=${fields}&pageSize=1000&includeItemsFromAllDrives=true&supportsAllDrives=true`;
 
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error?.message || 'Failed to fetch folder contents');
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache'
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error?.message || 'Failed to fetch folder contents');
+    }
+
+    const data = await response.json();
+    return data.files || [];
+  } catch (error) {
+    console.error('Error fetching folder contents:', error);
+    return [];
   }
-
-  const data = await response.json();
-  return data.files || [];
 };
 
 export const createDriveFolder = async (folderName, parentFolderId, accessToken) => {

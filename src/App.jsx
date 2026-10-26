@@ -18,8 +18,6 @@ import {
 } from './services/driveService';
 
 const GOOGLE_CLIENT_ID = "431007270977-j9h45it3o6fclmko97tttuioovqgb9m0.apps.googleusercontent.com";
-
-// Maximum Security: Listahan ng mga pinapayagang Safe File Extensions (Bawal ang Executable / Script Files)
 const ALLOWED_EXTENSIONS = ['pdf', 'docx', 'doc', 'pptx', 'ppt', 'xlsx', 'xls', 'txt', 'png', 'jpg', 'jpeg', 'zip', 'rar'];
 
 export default function App() {
@@ -65,13 +63,11 @@ export default function App() {
   const [uploadError, setUploadError] = useState('');
   const [receiptData, setReceiptData] = useState(null);
 
-  // MAXIMUM SECURITY HOOK: Anti-Code Theft, Anti-Right Click, Anti-DevTools Shortcuts
   useEffect(() => {
     document.documentElement.classList.add('dark');
 
     const handleContextMenu = (e) => e.preventDefault();
     const handleKeyDown = (e) => {
-      // Harangan ang F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U, Ctrl+Shift+C
       if (
         e.keyCode === 123 || 
         (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) ||
@@ -111,7 +107,7 @@ export default function App() {
     if (window.google?.accounts?.oauth2) {
       tokenClientRef.current = window.google.accounts.oauth2.initTokenClient({
         client_id: GOOGLE_CLIENT_ID,
-        scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.profile',
+        scope: 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.profile',
         callback: async (response) => {
           if (response.error) {
             console.error(response);
@@ -213,7 +209,6 @@ export default function App() {
   const handleAddFilesToFolder = async (filesToAdd, targetFolderId) => {
     if (!accessToken || !targetFolderId) return;
 
-    // Security Check para sa Virus/Malicious File Extensions
     for (const file of filesToAdd) {
       const ext = file.name.split('.').pop().toLowerCase();
       if (!ALLOWED_EXTENSIONS.includes(ext)) {
@@ -291,7 +286,6 @@ export default function App() {
   };
 
   const handleVerifyFolder = async (folderLinkOrId) => {
-    // Security check: Siguraduhing totoong Google Drive URL o valid ID lamang ang tatanggapin
     if (folderLinkOrId.includes('http') && !folderLinkOrId.includes('drive.google.com')) {
       alert('Security Protection: Tanging official Google Drive links lamang (https://drive.google.com) ang tinatanggap.');
       return;
@@ -715,16 +709,28 @@ export default function App() {
                   setDriveInput(e.target.value);
                   handleVerifyFolder(e.target.value);
                 }}
-                className="w-full pl-3 pr-16 py-2.5 bg-slate-900/80 border border-white/10 rounded-xl text-xs text-white outline-none focus:border-cyan-400 transition"
+                className="w-full pl-3 pr-24 py-2.5 bg-slate-900/80 border border-white/10 rounded-xl text-xs text-white outline-none focus:border-cyan-400 transition"
               />
-              <button
-                type="button"
-                onClick={handlePaste}
-                className="absolute right-1 px-3 py-1 bg-blue-600 text-white font-bold rounded-lg text-xs flex items-center gap-1 shadow-md"
-              >
-                <Clipboard className="w-3 h-3" />
-                <span>Paste</span>
-              </button>
+              <div className="absolute right-1 flex items-center gap-1">
+                {driveInput && (
+                  <button
+                    type="button"
+                    onClick={handleClearDriveInput}
+                    className="p-1.5 bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 border border-white/10 hover:border-red-500/30 rounded-lg text-xs transition"
+                    title="Clear Link"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handlePaste}
+                  className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg text-xs flex items-center gap-1 shadow-md transition active:scale-95"
+                >
+                  <Clipboard className="w-3 h-3" />
+                  <span>Paste</span>
+                </button>
+              </div>
             </div>
           </div>
 
