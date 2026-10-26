@@ -1,12 +1,12 @@
 import React from 'react';
-import { CheckCircle2, ExternalLink, X, FileCheck2 } from 'lucide-react';
+import { CheckCircle2, ExternalLink, X } from 'lucide-react';
 
 export default function SubmissionReceiptModal({ receiptData, onClose }) {
   if (!receiptData) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg bg-slate-900 border border-slate-700/60 rounded-3xl p-5 sm:p-6 space-y-5 text-slate-100 shadow-2xl my-auto max-h-[90vh]">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md overflow-hidden animate-in fade-in duration-200">
+      <div className="relative w-full max-w-md sm:max-w-lg bg-slate-900 border border-slate-700/60 rounded-3xl p-5 sm:p-6 space-y-4 text-slate-100 shadow-2xl max-h-[85vh] sm:max-h-[90vh] flex flex-col justify-between">
         
         <button
           type="button"
@@ -16,7 +16,7 @@ export default function SubmissionReceiptModal({ receiptData, onClose }) {
           <X className="w-5 h-5" />
         </button>
 
-        <div className="text-center space-y-2 pt-2">
+        <div className="text-center space-y-2 pt-2 flex-shrink-0">
           <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/10">
             <CheckCircle2 className="w-8 h-8" />
           </div>
@@ -24,7 +24,7 @@ export default function SubmissionReceiptModal({ receiptData, onClose }) {
           <p className="text-xs text-slate-400">Your files have been safely created & uploaded to Google Drive.</p>
         </div>
 
-        <div className="p-4 bg-slate-800/70 rounded-2xl border border-slate-700/50 space-y-2.5 text-xs">
+        <div className="p-4 bg-slate-800/70 rounded-2xl border border-slate-700/50 space-y-2.5 text-xs overflow-y-auto flex-1 my-2">
           <div className="flex justify-between items-center border-b border-white/5 pb-2">
             <span className="text-slate-400">Receipt ID:</span>
             <span className="font-mono text-emerald-400 font-bold">{receiptData.receiptId}</span>
@@ -52,7 +52,7 @@ export default function SubmissionReceiptModal({ receiptData, onClose }) {
             href={receiptData.folderUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/25 active:scale-98 transition-all"
+            className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/25 active:scale-98 transition-all flex-shrink-0"
           >
             <span>View Folder in Google Drive</span>
             <ExternalLink className="w-4 h-4" />

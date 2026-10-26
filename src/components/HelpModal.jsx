@@ -1,12 +1,12 @@
 import React from 'react';
-import { X, BookOpen, KeyRound, Link2, FolderCheck, Send, CheckCircle2 } from 'lucide-react';
+import { X, BookOpen, KeyRound, Link2, Send, CheckCircle2 } from 'lucide-react';
 
 export default function HelpModal({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg bg-slate-900 border border-slate-700/60 rounded-3xl p-5 sm:p-6 space-y-5 text-slate-100 shadow-2xl my-auto max-h-[90vh] flex flex-col justify-between">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md overflow-hidden animate-in fade-in duration-200">
+      <div className="relative w-full max-w-md sm:max-w-lg bg-slate-900 border border-slate-700/60 rounded-3xl p-5 sm:p-6 text-slate-100 shadow-2xl max-h-[85vh] sm:max-h-[90vh] flex flex-col justify-between">
         
         <button
           type="button"
@@ -16,7 +16,7 @@ export default function HelpModal({ isOpen, onClose }) {
           <X className="w-5 h-5" />
         </button>
 
-        <div className="space-y-1 pr-6">
+        <div className="space-y-1 pr-6 flex-shrink-0">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-full text-[11px] font-bold">
             <BookOpen className="w-3.5 h-3.5" />
             <span>User Guide</span>
@@ -27,7 +27,7 @@ export default function HelpModal({ isOpen, onClose }) {
           </p>
         </div>
 
-        <div className="space-y-3 overflow-y-auto pr-1 text-xs custom-scrollbar">
+        <div className="space-y-3 overflow-y-auto my-4 pr-1 text-xs custom-scrollbar flex-1">
           
           <div className="p-3.5 bg-slate-800/60 rounded-2xl border border-slate-700/50 flex gap-3.5 items-start">
             <div className="w-8 h-8 rounded-xl bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center font-bold text-sm flex-shrink-0">
@@ -89,7 +89,7 @@ export default function HelpModal({ isOpen, onClose }) {
         <button
           type="button"
           onClick={onClose}
-          className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl text-xs shadow-lg shadow-blue-600/25 active:scale-98 transition-all"
+          className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl text-xs shadow-lg shadow-blue-600/25 active:scale-98 transition-all flex-shrink-0"
         >
           Got it, let's start!
         </button>
