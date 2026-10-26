@@ -11,7 +11,7 @@ export default function FolderExplorer({
   onDeleteItem,
   onAddFilesToFolder,
   isLoading,
-  myCreatedIds = []
+  user
 }) {
   const quickFileInputRef = useRef(null);
   const isRoot = currentFolderId === rootFolderId;
@@ -28,6 +28,7 @@ export default function FolderExplorer({
   return (
     <div className="glass-card rounded-2xl p-4 border border-slate-200 dark:border-white/10 space-y-3">
       <div className="flex items-center justify-between gap-2 flex-wrap">
+        {/* Breadcrumbs Navigation */}
         <div className="flex items-center gap-1.5 text-xs text-slate-500 overflow-x-auto pb-1 font-medium min-w-0">
           {breadcrumbs.map((crumb, idx) => (
             <React.Fragment key={crumb.id || idx}>
@@ -45,6 +46,7 @@ export default function FolderExplorer({
           ))}
         </div>
 
+        {/* Show Add Files Button inside subfolders */}
         {!isRoot && (
           <div>
             <input
@@ -66,6 +68,7 @@ export default function FolderExplorer({
         )}
       </div>
 
+      {/* Contents Area */}
       {isLoading ? (
         <div className="py-8 text-center space-y-2">
           <Loader2 className="w-6 h-6 animate-spin text-blue-500 mx-auto" />
@@ -82,7 +85,6 @@ export default function FolderExplorer({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1">
           {folderContents.map((item) => {
             const isFolder = item.mimeType === 'application/vnd.google-apps.folder';
-            const isMine = myCreatedIds.includes(item.id);
 
             return (
               <div
@@ -102,21 +104,20 @@ export default function FolderExplorer({
                 </div>
 
                 <div className="flex items-center gap-1 flex-shrink-0">
-                  {isMine && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (confirm(`Are you sure you want to delete "${item.name}"?`)) {
-                          onDeleteItem && onDeleteItem(item.id);
-                        }
-                      }}
-                      className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
-                      title="Delete item"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
+                  {/* Direct Delete Button para sa bawat item sa folder */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm(`Are you sure you want to delete "${item.name}"?`)) {
+                        onDeleteItem && onDeleteItem(item.id);
+                      }
+                    }}
+                    className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                    title="Delete item"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                  </button>
 
                   {isFolder ? (
                     <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
