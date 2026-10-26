@@ -209,7 +209,7 @@ export default function App() {
       await loadFolderItems(targetFolderId);
     } catch (err) {
       setUploadError(err.message || 'Error uploading file');
-    } fontally {
+    } finally {
       setIsUploading(false);
     }
   };
