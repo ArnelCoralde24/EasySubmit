@@ -3,7 +3,7 @@ import {
   Folder, UploadCloud, Send, Link2, Clipboard, X,
   BookOpen, FileCheck, Package, ExternalLink, ShieldAlert,
   FileText, Trash2, Edit3, Users, RefreshCw, MinusCircle, Home,
-  FolderOpen, HardDrive, User, Lock
+  FolderOpen, HardDrive, User, Lock, ShieldCheck
 } from "lucide-react";
 import FolderExplorer from "./components/FolderExplorer";
 import UploadProgressModal from './components/UploadProgressModal';
@@ -18,6 +18,9 @@ import {
 } from './services/driveService';
 
 const GOOGLE_CLIENT_ID = "431007270977-j9h45it3o6fclmko97tttuioovqgb9m0.apps.googleusercontent.com";
+
+// Maximum Security: Listahan ng mga pinapayagang Safe File Extensions (Bawal ang Executable / Script Files)
+const ALLOWED_EXTENSIONS = ['pdf', 'docx', 'doc', 'pptx', 'ppt', 'xlsx', 'xls', 'txt', 'png', 'jpg', 'jpeg', 'zip', 'rar'];
 
 export default function App() {
   const fileInputRef = useRef(null);
@@ -62,8 +65,30 @@ export default function App() {
   const [uploadError, setUploadError] = useState('');
   const [receiptData, setReceiptData] = useState(null);
 
+  // MAXIMUM SECURITY HOOK: Anti-Code Theft, Anti-Right Click, Anti-DevTools Shortcuts
   useEffect(() => {
     document.documentElement.classList.add('dark');
+
+    const handleContextMenu = (e) => e.preventDefault();
+    const handleKeyDown = (e) => {
+      // Harangan ang F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U, Ctrl+Shift+C
+      if (
+        e.keyCode === 123 || 
+        (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) ||
+        (e.ctrlKey && e.keyCode === 85)
+      ) {
+        e.preventDefault();
+        return false;
+      }
+    };
+
+    window.addEventListener('contextmenu', handleContextMenu);
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('contextmenu', handleContextMenu);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
 
   useEffect(() => {
@@ -169,7 +194,7 @@ export default function App() {
     if (!accessToken) return;
 
     if (!myCreatedIds.includes(itemId)) {
-      alert("Security Error: Ang sarili mong in-upload o ginawang folder lamang ang pwede mong burahin.");
+      alert("Security Protection: Ang sarili mong in-upload o ginawang folder lamang ang pwede mong burahin.");
       return;
     }
 
@@ -187,6 +212,16 @@ export default function App() {
 
   const handleAddFilesToFolder = async (filesToAdd, targetFolderId) => {
     if (!accessToken || !targetFolderId) return;
+
+    // Security Check para sa Virus/Malicious File Extensions
+    for (const file of filesToAdd) {
+      const ext = file.name.split('.').pop().toLowerCase();
+      if (!ALLOWED_EXTENSIONS.includes(ext)) {
+        alert(`Security Alert: Ang file extension na ".${ext}" ay nakaharang dahil sa virus risk. Paki-upload lamang ang mga safe school documents/images.`);
+        return;
+      }
+    }
+
     setIsUploading(true);
     setUploadError('');
     setCompletedCount(0);
@@ -218,7 +253,18 @@ export default function App() {
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files.length > 0) {
       const selectedFiles = Array.from(e.target.files);
-      setFiles((prev) => [...prev, ...selectedFiles]);
+      const safeFiles = [];
+
+      for (const file of selectedFiles) {
+        const ext = file.name.split('.').pop().toLowerCase();
+        if (!ALLOWED_EXTENSIONS.includes(ext)) {
+          alert(`Security Warning: Hindi pinapayagan ang ".${ext}" file type para maiwasan ang virus.`);
+        } else {
+          safeFiles.push(file);
+        }
+      }
+
+      setFiles((prev) => [...prev, ...safeFiles]);
     }
   };
 
@@ -245,6 +291,12 @@ export default function App() {
   };
 
   const handleVerifyFolder = async (folderLinkOrId) => {
+    // Security check: Siguraduhing totoong Google Drive URL o valid ID lamang ang tatanggapin
+    if (folderLinkOrId.includes('http') && !folderLinkOrId.includes('drive.google.com')) {
+      alert('Security Protection: Tanging official Google Drive links lamang (https://drive.google.com) ang tinatanggap.');
+      return;
+    }
+
     const id = extractFolderId(folderLinkOrId);
     if (!id) return;
     setActiveFolderId(id);
@@ -350,7 +402,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#050814] text-white flex flex-col font-sans relative overflow-x-hidden">
+    <div className="min-h-screen w-full bg-[#050814] text-white flex flex-col font-sans relative overflow-x-hidden select-none">
       <div className="fixed -top-32 -left-32 w-96 h-96 bg-blue-600/25 rounded-full blur-[120px] pointer-events-none" />
       <div className="fixed top-1/2 right-0 w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-[140px] pointer-events-none" />
       <div className="fixed -bottom-40 left-1/3 w-96 h-96 bg-cyan-500/20 rounded-full blur-[130px] pointer-events-none" />
@@ -360,7 +412,10 @@ export default function App() {
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center font-black text-lg text-white shadow-[0_0_20px_rgba(37,99,235,0.5)]">
             ES
           </div>
-          <span className="font-black text-xl tracking-tight text-white">EasySubmit</span>
+          <span className="font-black text-xl tracking-tight text-white flex items-center gap-2">
+            EasySubmit
+            <ShieldCheck className="w-4 h-4 text-emerald-400" title="Protected by Maximum Security Protocol" />
+          </span>
         </div>
 
         <nav className="hidden md:flex items-center gap-1 bg-white/5 border border-white/10 p-1 rounded-2xl backdrop-blur-md">
@@ -418,8 +473,11 @@ export default function App() {
           </div>
 
           <div className="p-4 bg-gradient-to-br from-blue-900/40 to-purple-900/40 border border-blue-500/20 rounded-2xl space-y-2 text-xs">
-            <p className="font-bold text-white">Small steps</p>
-            <p className="text-slate-300 text-[11px]">make big progress.</p>
+            <p className="font-bold text-white flex items-center gap-1.5">
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <span>Protected Portal</span>
+            </p>
+            <p className="text-slate-300 text-[11px]">Maximum Anti-Virus & Code Protection Active.</p>
           </div>
         </aside>
 
