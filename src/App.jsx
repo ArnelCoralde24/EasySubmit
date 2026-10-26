@@ -107,7 +107,7 @@ export default function App() {
     if (window.google?.accounts?.oauth2) {
       tokenClientRef.current = window.google.accounts.oauth2.initTokenClient({
         client_id: GOOGLE_CLIENT_ID,
-        scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email',
+        scope: 'email profile https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly',
         callback: async (response) => {
           if (response.error) {
             console.error(response);
