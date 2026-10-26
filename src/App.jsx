@@ -27,6 +27,7 @@ export default function App() {
 
   const [driveInput, setDriveInput] = useState('');
   const [activeFolderId, setActiveFolderId] = useState('');
+  const [currentFolderId, setCurrentFolderId] = useState('');
   const [folderContents, setFolderContents] = useState([]);
   const [breadcrumbs, setBreadcrumbs] = useState([]);
   const [isLoadingContents, setIsLoadingContents] = useState(false);
@@ -99,24 +100,43 @@ export default function App() {
     }
   };
 
-  const loadFolderItems = async (folderId) => {
-    if (!accessToken) return;
-    setIsLoadingContents(true);
+  const loadFolderItems = async (targetId, silent = false) => {
+    if (!accessToken || !targetId) return;
+    if (!silent) setIsLoadingContents(true);
     try {
-      const items = await fetchFolderContents(folderId, accessToken);
-      setFolderContents(items);
+      const items = await fetchFolderContents(targetId, accessToken);
+      setFolderContents(items || []);
     } catch (err) {
       console.error(err);
     } finally {
-      setIsLoadingContents(false);
+      if (!silent) setIsLoadingContents(false);
     }
   };
 
+  // Real-time Auto Refresh (Polling tuwing 5 segundo)
   useEffect(() => {
-    if (activeFolderId && accessToken) {
-      loadFolderItems(activeFolderId);
+    const targetFolder = currentFolderId || activeFolderId;
+    if (targetFolder && accessToken) {
+      loadFolderItems(targetFolder);
+
+      const interval = setInterval(() => {
+        loadFolderItems(targetFolder, true);
+      }, 5000);
+
+      return () => clearInterval(interval);
     }
-  }, [activeFolderId, accessToken]);
+  }, [activeFolderId, currentFolderId, accessToken]);
+
+  const handleFolderClick = (folder) => {
+    setCurrentFolderId(folder.id);
+    setBreadcrumbs((prev) => [...prev, { id: folder.id, name: folder.name }]);
+  };
+
+  const handleBreadcrumbClick = (index) => {
+    const targetBreadcrumb = breadcrumbs[index];
+    setBreadcrumbs((prev) => prev.slice(0, index + 1));
+    setCurrentFolderId(targetBreadcrumb.id);
+  };
 
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -142,6 +162,7 @@ export default function App() {
   const handleClearDriveInput = () => {
     setDriveInput('');
     setActiveFolderId('');
+    setCurrentFolderId('');
     setFolderContents([]);
     setBreadcrumbs([]);
   };
@@ -150,6 +171,7 @@ export default function App() {
     const id = extractFolderId(folderLinkOrId);
     if (!id) return;
     setActiveFolderId(id);
+    setCurrentFolderId(id);
     setBreadcrumbs([{ id, name: 'Root Folder' }]);
   };
 
@@ -186,15 +208,12 @@ export default function App() {
       const finalFolderName = customSubmissionName.trim() || submissionType;
 
       if (accessToken) {
-        // 1. Una munang lilikhain ang Student / Section Folder sa loob ng Teacher's Drive
         const studentLabel = fullName.trim() || 'Student Name';
         const studentFolderName = section.trim()
           ? `[${section.trim()}] ${studentLabel}`
           : studentLabel;
 
         const studentFolder = await createDriveFolder(studentFolderName, activeFolderId, accessToken);
-
-        // 2. Isusunod ang Submission / Activity Subfolder sa loob ng Student Folder
         const submissionFolder = await createDriveFolder(finalFolderName, studentFolder.id, accessToken);
         targetFolderId = submissionFolder.id;
       }
@@ -231,8 +250,9 @@ export default function App() {
       setFiles([]);
       setLoaData(null);
 
-      if (accessToken && activeFolderId) {
-        loadFolderItems(activeFolderId);
+      // Refresh real-time
+      if (accessToken && (currentFolderId || activeFolderId)) {
+        loadFolderItems(currentFolderId || activeFolderId);
       }
     } catch (err) {
       setUploadError(err.message || 'An error occurred during upload.');
@@ -376,15 +396,19 @@ export default function App() {
             <div className="flex items-center justify-between px-1">
               <div className="flex items-center gap-2">
                 <Users className="w-4 h-4 text-blue-500" />
-                <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
                   Folder Submissions & Subfolders ({folderContents.length})
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
                 </h3>
               </div>
 
               {accessToken && (
                 <button
                   type="button"
-                  onClick={() => loadFolderItems(activeFolderId)}
+                  onClick={() => loadFolderItems(currentFolderId || activeFolderId)}
                   className="flex items-center gap-1 text-[11px] text-blue-600 dark:text-blue-400 hover:underline font-semibold"
                 >
                   <RefreshCw className={`w-3 h-3 ${isLoadingContents ? 'animate-spin' : ''}`} />
@@ -395,15 +419,17 @@ export default function App() {
 
             <FolderExplorer
               folderContents={folderContents}
-              currentFolderId={activeFolderId}
+              currentFolderId={currentFolderId || activeFolderId}
               breadcrumbs={breadcrumbs}
+              onBreadcrumbClick={handleBreadcrumbClick}
+              onFolderClick={handleFolderClick}
               isLoading={isLoadingContents}
               user={user}
             />
 
             <div className="text-right">
               <a
-                href={`https://drive.google.com/drive/folders/${activeFolderId}`}
+                href={`https://drive.google.com/drive/folders/${currentFolderId || activeFolderId}`}
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 hover:text-blue-500 transition-colors duration-200"
