@@ -1,5 +1,5 @@
-import React, { useRef } from 'react';
-import { Folder, FileText, ChevronRight, ExternalLink, Loader2, Trash2, Plus } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { Folder, FileText, Trash2, ChevronRight, UploadCloud, FolderPlus, Loader2, ExternalLink, Lock } from 'lucide-react';
 
 export default function FolderExplorer({
   folderContents,
@@ -11,128 +11,163 @@ export default function FolderExplorer({
   onDeleteItem,
   onAddFilesToFolder,
   isLoading,
-  user
+  myCreatedIds = []
 }) {
-  const quickFileInputRef = useRef(null);
-  const isRoot = currentFolderId === rootFolderId;
+  const fileInputRef = useRef(null);
+  const [isUploadingInside, setIsUploadingInside] = useState(false);
 
-  const handleQuickFileChange = (e) => {
+  const handleInnerFileChange = async (e) => {
     if (e.target.files && e.target.files.length > 0) {
       const selectedFiles = Array.from(e.target.files);
-      if (onAddFilesToFolder) {
-        onAddFilesToFolder(selectedFiles, currentFolderId);
-      }
+      setIsUploadingInside(true);
+      await onAddFilesToFolder(selectedFiles, currentFolderId);
+      setIsUploadingInside(false);
+      e.target.value = '';
     }
   };
 
+  const formatFileSize = (bytes) => {
+    if (!bytes || bytes === 0) return '';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  };
+
   return (
-    <div className="glass-card rounded-2xl p-4 border border-slate-200 dark:border-white/10 space-y-3">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        {/* Breadcrumbs Navigation */}
-        <div className="flex items-center gap-1.5 text-xs text-slate-500 overflow-x-auto pb-1 font-medium min-w-0">
-          {breadcrumbs.map((crumb, idx) => (
-            <React.Fragment key={crumb.id || idx}>
-              <button
-                type="button"
-                onClick={() => onBreadcrumbClick && onBreadcrumbClick(idx)}
-                className={`hover:text-blue-500 transition-colors whitespace-nowrap ${
-                  idx === breadcrumbs.length - 1 ? 'font-bold text-slate-900 dark:text-white' : ''
-                }`}
-              >
-                {crumb.name}
-              </button>
-              {idx < breadcrumbs.length - 1 && <ChevronRight className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />}
-            </React.Fragment>
-          ))}
+    <div className="bg-slate-900/90 border border-white/10 rounded-3xl p-4 sm:p-5 space-y-4 backdrop-blur-2xl">
+      <div className="flex items-center justify-between flex-wrap gap-2 pb-3 border-b border-white/10 text-xs">
+        <div className="flex items-center gap-1.5 flex-wrap font-medium">
+          {breadcrumbs.map((crumb, idx) => {
+            const isLast = idx === breadcrumbs.length - 1;
+            return (
+              <React.Fragment key={crumb.id || idx}>
+                {idx > 0 && <ChevronRight className="w-3.5 h-3.5 text-slate-500" />}
+                <button
+                  type="button"
+                  onClick={() => onBreadcrumbClick(idx)}
+                  className={`hover:underline flex items-center gap-1 transition ${
+                    isLast ? 'text-cyan-400 font-bold' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {idx === 0 ? <Folder className="w-3.5 h-3.5 text-cyan-400" /> : null}
+                  <span>{crumb.name}</span>
+                </button>
+              </React.Fragment>
+            );
+          })}
         </div>
 
-        {/* Show Add Files Button inside subfolders */}
-        {!isRoot && (
-          <div>
-            <input
-              ref={quickFileInputRef}
-              type="file"
-              multiple
-              className="hidden"
-              onChange={handleQuickFileChange}
-            />
-            <button
-              type="button"
-              onClick={() => quickFileInputRef.current && quickFileInputRef.current.click()}
-              className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-xs flex items-center gap-1 shadow-sm transition active:scale-95"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add Files Here</span>
-            </button>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={handleInnerFileChange}
+          />
+          <button
+            type="button"
+            disabled={isUploadingInside}
+            onClick={() => fileInputRef.current && fileInputRef.current.click()}
+            className="px-3 py-1.5 bg-cyan-600/30 hover:bg-cyan-600/50 text-cyan-300 border border-cyan-500/30 rounded-xl text-[11px] font-bold flex items-center gap-1.5 transition active:scale-95 disabled:opacity-50"
+          >
+            {isUploadingInside ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <UploadCloud className="w-3.5 h-3.5 text-cyan-300" />
+            )}
+            <span>Add File / Folder Here</span>
+          </button>
+        </div>
       </div>
 
-      {/* Contents Area */}
       {isLoading ? (
-        <div className="py-8 text-center space-y-2">
-          <Loader2 className="w-6 h-6 animate-spin text-blue-500 mx-auto" />
-          <p className="text-xs text-slate-500">Checking Google Drive in real-time...</p>
+        <div className="py-12 text-center space-y-2">
+          <Loader2 className="w-6 h-6 animate-spin mx-auto text-cyan-400" />
+          <p className="text-xs text-slate-400">Loading folder contents...</p>
         </div>
       ) : folderContents.length === 0 ? (
-        <div className="py-8 text-center space-y-2">
-          <div className="w-12 h-12 rounded-2xl bg-slate-200/50 dark:bg-slate-800/50 flex items-center justify-center mx-auto text-slate-400">
-            <Folder className="w-6 h-6" />
-          </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">This folder is currently empty.</p>
+        <div className="py-10 text-center space-y-2">
+          <FolderPlus className="w-8 h-8 mx-auto text-slate-600" />
+          <p className="text-xs font-semibold text-slate-400">This folder is empty</p>
+          <p className="text-[11px] text-slate-500">You can upload files directly into this directory using the button above.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1">
+        <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
           {folderContents.map((item) => {
             const isFolder = item.mimeType === 'application/vnd.google-apps.folder';
+            const isMine = myCreatedIds.includes(item.id);
 
             return (
               <div
                 key={item.id}
-                onClick={() => isFolder && onFolderClick && onFolderClick(item)}
-                className={`p-2.5 rounded-xl border border-slate-200 dark:border-white/5 bg-white/50 dark:bg-slate-900/50 flex items-center justify-between gap-2 text-xs transition-all ${
-                  isFolder ? 'hover:bg-blue-500/10 hover:border-blue-500/40 cursor-pointer' : ''
-                }`}
+                className="flex items-center justify-between p-3 bg-slate-950/60 border border-white/5 hover:border-white/20 rounded-2xl text-xs transition-all group"
               >
-                <div className="flex items-center gap-2 min-w-0 flex-1">
-                  {isFolder ? (
-                    <Folder className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                  ) : (
-                    <FileText className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                  )}
-                  <span className="truncate font-medium text-slate-800 dark:text-slate-200">{item.name}</span>
+                <div
+                  onClick={() => {
+                    if (isFolder) {
+                      onFolderClick(item);
+                    } else if (item.webViewLink) {
+                      window.open(item.webViewLink, '_blank');
+                    }
+                  }}
+                  className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer pr-3"
+                >
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                    isFolder ? 'bg-blue-600/20 text-cyan-400 border border-cyan-500/30' : 'bg-slate-800 text-slate-300 border border-white/10'
+                  }`}>
+                    {isFolder ? <Folder className="w-4 h-4 fill-cyan-400/20" /> : <FileText className="w-4 h-4" />}
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-slate-200 group-hover:text-cyan-300 truncate transition">
+                        {item.name}
+                      </p>
+                      {isMine && (
+                        <span className="px-1.5 py-0.5 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 rounded-md text-[9px] font-bold">
+                          Yours
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-slate-500 font-mono">
+                      {isFolder ? 'Folder' : formatFileSize(item.size)}
+                    </p>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-1 flex-shrink-0">
-                  {/* Direct Delete Button para sa bawat item sa folder */}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (confirm(`Are you sure you want to delete "${item.name}"?`)) {
-                        onDeleteItem && onDeleteItem(item.id);
-                      }
-                    }}
-                    className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
-                    title="Delete item"
-                  >
-                    <Trash2 className="w-3.5 h-3.5 text-red-400" />
-                  </button>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  {item.webViewLink && (
+                    <a
+                      href={item.webViewLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/10 transition"
+                      title="Open in Drive"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  )}
 
-                  {isFolder ? (
-                    <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                  {isMine ? (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (confirm(`Sigurado ka bang gusto mong burahin ang "${item.name}"?`)) {
+                          onDeleteItem(item.id);
+                        }
+                      }}
+                      className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-500/20 border border-red-500/30 rounded-xl transition"
+                      title="Delete your item"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   ) : (
-                    item.webViewLink && (
-                      <a
-                        href={item.webViewLink}
-                        target="_blank"
-                        rel="noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="p-1 text-slate-400 hover:text-blue-500 transition-colors"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5" />
-                      </a>
-                    )
+                    <div className="p-1.5 text-slate-600 cursor-not-allowed" title="Protected (Created by another user)">
+                      <Lock className="w-3.5 h-3.5" />
+                    </div>
                   )}
                 </div>
               </div>

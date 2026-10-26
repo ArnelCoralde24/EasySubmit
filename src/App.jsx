@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { 
-  Folder, UploadCloud, Send, CheckCircle2, Link2, Clipboard, X,
-  BookOpen, FileCheck, Package, ExternalLink, ShieldAlert, History,
+  Folder, UploadCloud, Send, Link2, Clipboard, X,
+  BookOpen, FileCheck, Package, ExternalLink, ShieldAlert,
   FileText, Trash2, Edit3, Users, RefreshCw, MinusCircle, Home,
-  FolderOpen, HardDrive, Settings, User, Lock, Smartphone, KeyRound
+  FolderOpen, HardDrive, User, Lock
 } from "lucide-react";
 import FolderExplorer from "./components/FolderExplorer";
 import UploadProgressModal from './components/UploadProgressModal';
@@ -167,8 +167,9 @@ export default function App() {
 
   const handleDeleteItem = async (itemId) => {
     if (!accessToken) return;
+
     if (!myCreatedIds.includes(itemId)) {
-      alert("Security Error: You can only delete folders/files created by your device.");
+      alert("Security Error: Ang sarili mong in-upload o ginawang folder lamang ang pwede mong burahin.");
       return;
     }
 
@@ -350,13 +351,10 @@ export default function App() {
 
   return (
     <div className="min-h-screen w-full bg-[#050814] text-white flex flex-col font-sans relative overflow-x-hidden">
-      
-      {/* Background Neon Glowing Liquid Orbs */}
       <div className="fixed -top-32 -left-32 w-96 h-96 bg-blue-600/25 rounded-full blur-[120px] pointer-events-none" />
       <div className="fixed top-1/2 right-0 w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-[140px] pointer-events-none" />
       <div className="fixed -bottom-40 left-1/3 w-96 h-96 bg-cyan-500/20 rounded-full blur-[130px] pointer-events-none" />
 
-      {/* Top Navbar */}
       <header className="sticky top-0 z-40 w-full backdrop-blur-xl bg-slate-950/60 border-b border-white/10 px-4 sm:px-8 py-3.5 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center font-black text-lg text-white shadow-[0_0_20px_rgba(37,99,235,0.5)]">
@@ -365,7 +363,6 @@ export default function App() {
           <span className="font-black text-xl tracking-tight text-white">EasySubmit</span>
         </div>
 
-        {/* Center Pill Nav */}
         <nav className="hidden md:flex items-center gap-1 bg-white/5 border border-white/10 p-1 rounded-2xl backdrop-blur-md">
           <button type="button" className="px-4 py-1.5 rounded-xl bg-blue-600 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-blue-600/30">
             <Home className="w-4 h-4" />
@@ -381,7 +378,6 @@ export default function App() {
           </a>
         </nav>
 
-        {/* Header Right Actions */}
         <div className="flex items-center gap-3">
           {accessToken ? (
             <div className="flex items-center gap-2.5 bg-blue-950/60 border border-blue-500/30 px-3 py-1.5 rounded-2xl">
@@ -404,10 +400,7 @@ export default function App() {
         </div>
       </header>
 
-      {/* Main Grid Layout Container */}
       <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6 relative z-10">
-        
-        {/* Left Navigation Sidebar (Desktop) */}
         <aside className="hidden lg:flex lg:col-span-3 flex-col justify-between bg-white/5 border border-white/10 rounded-3xl p-5 backdrop-blur-2xl">
           <div className="space-y-2">
             <button type="button" className="w-full flex items-center gap-3 px-4 py-3 bg-blue-600 text-white font-bold rounded-2xl text-xs shadow-lg shadow-blue-600/30 transition">
@@ -430,10 +423,7 @@ export default function App() {
           </div>
         </aside>
 
-        {/* Middle Main Form Area */}
         <main className="lg:col-span-6 space-y-6">
-          
-          {/* Banner Hero Card */}
           <div className="relative overflow-hidden bg-gradient-to-br from-blue-900/60 via-indigo-900/40 to-purple-900/60 border border-blue-500/30 rounded-3xl p-6 sm:p-8 backdrop-blur-2xl shadow-[0_0_40px_rgba(37,99,235,0.25)]">
             <div className="relative z-10 max-w-lg space-y-3">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-500/20 border border-blue-500/40 text-cyan-300 text-[11px] font-bold rounded-full">
@@ -446,13 +436,10 @@ export default function App() {
                 Paste the teacher's folder link, enter your name & section, and EasySubmit will organize your personal folder and upload your files directly to Drive.
               </p>
             </div>
-            {/* Liquid Sphere Graphic */}
             <div className="absolute top-1/2 -right-10 -translate-y-1/2 w-48 h-48 bg-gradient-to-tr from-cyan-400 via-blue-600 to-purple-600 rounded-full blur-sm opacity-80 animate-pulse hidden sm:block pointer-events-none" />
           </div>
 
           <form onSubmit={handleSubmission} className="space-y-6">
-            
-            {/* Step 1: Student & Submission Info */}
             <div className="bg-white/5 border border-white/10 rounded-3xl p-5 sm:p-6 backdrop-blur-2xl space-y-5">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-xl bg-blue-600/30 text-cyan-400 border border-blue-500/40 flex items-center justify-center font-bold text-xs shadow-md">
@@ -530,7 +517,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Step 2: Submission Title */}
             <div className="bg-white/5 border border-white/10 rounded-3xl p-5 sm:p-6 backdrop-blur-2xl space-y-3">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-xl bg-blue-600/30 text-cyan-400 border border-blue-500/40 flex items-center justify-center font-bold text-xs shadow-md">
@@ -549,7 +535,6 @@ export default function App() {
               />
             </div>
 
-            {/* Step 3: Select School Files */}
             <div className="bg-white/5 border border-white/10 rounded-3xl p-5 sm:p-6 backdrop-blur-2xl space-y-4">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-xl bg-cyan-600/30 text-cyan-400 border border-cyan-500/40 flex items-center justify-center font-bold text-xs shadow-md">
@@ -605,7 +590,6 @@ export default function App() {
               )}
             </div>
 
-            {/* Folder Explorer Section */}
             {activeFolderId && (
               <div className="space-y-3">
                 <div className="flex justify-between items-center px-1">
@@ -637,10 +621,7 @@ export default function App() {
           </form>
         </main>
 
-        {/* Right Status Sidebar */}
         <aside className="lg:col-span-3 space-y-6">
-          
-          {/* Google Drive Status Widget */}
           <div className="bg-white/5 border border-white/10 rounded-3xl p-5 backdrop-blur-2xl space-y-3">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 flex items-center justify-center flex-shrink-0">
@@ -665,7 +646,6 @@ export default function App() {
             )}
           </div>
 
-          {/* Teacher's Link Box */}
           <div className="bg-white/5 border border-white/10 rounded-3xl p-5 backdrop-blur-2xl space-y-3">
             <p className="text-xs font-bold text-white">Teacher's Link</p>
             <div className="relative flex items-center">
@@ -690,7 +670,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* Folder Structure Preview Card */}
           <div className="bg-white/5 border border-white/10 rounded-3xl p-5 backdrop-blur-2xl space-y-3 text-xs">
             <p className="font-bold text-white flex items-center gap-2">
               <FolderOpen className="w-4 h-4 text-cyan-400" />
@@ -705,7 +684,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* Big Neon Connect / Submit Action Button */}
           <button
             type="submit"
             onClick={handleSubmission}
@@ -723,7 +701,6 @@ export default function App() {
 
       </div>
 
-      {/* Footer */}
       <footer className="w-full text-center py-6 text-xs text-slate-400 border-t border-white/5 relative z-10">
         <p>EasySubmit • Direct School Submission Portal</p>
         <a
