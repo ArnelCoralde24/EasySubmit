@@ -10,21 +10,25 @@ import LOAModal from './components/LOAModal';
 import UploadProgressModal from './components/UploadProgressModal';
 import SubmissionReceiptModal from './components/SubmissionReceiptModal';
 import HelpModal from './components/HelpModal';
-import { extractFolderId, fetchFolderContents, createDriveFolder, uploadFileToDrive } from './services/driveService';
+import { 
+  extractFolderId, 
+  fetchFolderContents, 
+  createDriveFolder, 
+  uploadFileToDrive, 
+  deleteDriveItem 
+} from './services/driveService';
 
 const GOOGLE_CLIENT_ID = "431007270977-j9h45it3o6fclmko97tttuioovqgb9m0.apps.googleusercontent.com";
 
 export default function App() {
-  // 1. DEFAULT DARK MODE SETUP
   const [darkMode, setDarkMode] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
-    return savedTheme ? savedTheme === 'dark' : true; // Default to TRUE (Dark Mode)
+    return savedTheme ? savedTheme === 'dark' : true;
   });
 
   const fileInputRef = useRef(null);
   const tokenClientRef = useRef(null);
 
-  // 2. PERSISTENT GOOGLE LOGIN (SESSIONSTORAGE)
   const [user, setUser] = useState(() => {
     const savedUser = sessionStorage.getItem('easysubmit_user');
     return savedUser ? JSON.parse(savedUser) : null;
@@ -32,6 +36,11 @@ export default function App() {
 
   const [accessToken, setAccessToken] = useState(() => {
     return sessionStorage.getItem('easysubmit_token') || null;
+  });
+
+  const [myCreatedIds, setMyCreatedIds] = useState(() => {
+    const saved = localStorage.getItem('easysubmit_my_ids');
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [driveInput, setDriveInput] = useState('');
@@ -46,7 +55,6 @@ export default function App() {
   const [subject, setSubject] = useState('');
   const [studentId, setStudentId] = useState('');
   
-  // Default submission type is set to 'Assignment'
   const [submissionType, setSubmissionType] = useState('Assignment');
   const [customSubmissionName, setCustomSubmissionName] = useState('');
 
@@ -64,6 +72,10 @@ export default function App() {
   const [receiptData, setReceiptData] = useState(null);
 
   useEffect(() => {
+    localStorage.setItem('easysubmit_my_ids', JSON.stringify(myCreatedIds));
+  }, [myCreatedIds]);
+
+  useEffect(() => {
     const root = document.documentElement;
     if (darkMode) {
       root.classList.add('dark');
@@ -74,7 +86,6 @@ export default function App() {
     }
   }, [darkMode]);
 
-  // Google OAuth Initialization & Token Persistence
   useEffect(() => {
     if (window.google?.accounts?.oauth2) {
       tokenClientRef.current = window.google.accounts.oauth2.initTokenClient({
@@ -110,7 +121,7 @@ export default function App() {
 
   const handleConnectDrive = () => {
     if (tokenClientRef.current) {
-      tokenClientRef.current.requestAccessToken({ prompt: '' }); // Fast reconnect without consent prompt every time
+      tokenClientRef.current.requestAccessToken({ prompt: '' });
     } else {
       alert('Google SDK script is still loading. Please try again in a moment.');
     }
@@ -136,7 +147,6 @@ export default function App() {
     }
   };
 
-  // Real-time Auto Refresh (Polling every 5s)
   useEffect(() => {
     const targetFolder = currentFolderId || activeFolderId;
     if (targetFolder && accessToken) {
@@ -159,6 +169,53 @@ export default function App() {
     const targetBreadcrumb = breadcrumbs[index];
     setBreadcrumbs((prev) => prev.slice(0, index + 1));
     setCurrentFolderId(targetBreadcrumb.id);
+  };
+
+  const handleDeleteItem = async (itemId) => {
+    if (!accessToken) return;
+
+    setFolderContents((prev) => prev.filter((item) => item.id !== itemId));
+    setMyCreatedIds((prev) => prev.filter((id) => id !== itemId));
+
+    try {
+      await deleteDriveItem(itemId, accessToken);
+      await loadFolderItems(currentFolderId || activeFolderId, true);
+    } catch (err) {
+      alert('Failed to delete item from Google Drive: ' + err.message);
+      loadFolderItems(currentFolderId || activeFolderId);
+    }
+  };
+
+  const handleAddFilesToFolder = async (filesToAdd, targetFolderId) => {
+    if (!accessToken || !targetFolderId) return;
+
+    setIsUploading(true);
+    setUploadError('');
+    setCompletedCount(0);
+
+    const newlyCreated = [];
+
+    try {
+      for (let i = 0; i < filesToAdd.length; i++) {
+        const file = filesToAdd[i];
+        setCurrentUploadingFile(file.name);
+        setUploadProgress(0);
+
+        const result = await uploadFileToDrive(file, targetFolderId, accessToken, (percent) => {
+          setUploadProgress(percent);
+        });
+
+        if (result?.id) newlyCreated.push(result.id);
+        setCompletedCount(i + 1);
+      }
+
+      setMyCreatedIds((prev) => [...prev, ...newlyCreated]);
+      await loadFolderItems(targetFolderId);
+    } catch (err) {
+      setUploadError(err.message || 'Error uploading file');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleFileChange = (e) => {
@@ -198,7 +255,6 @@ export default function App() {
     setBreadcrumbs([{ id, name: 'Root Folder' }]);
   };
 
-  // 3. ADDED "NONE" OPTION TO CATEGORIES
   const categories = [
     { id: 'None', title: 'None (Direct to Name Folder)', sub: 'Direct upload to student folder', icon: MinusCircle },
     { id: 'Assignment', title: 'Assignment', sub: '/Assignments', icon: BookOpen },
@@ -228,26 +284,26 @@ export default function App() {
       allFilesToUpload.unshift(loaData.generatedFile);
     }
 
+    const createdIdsThisSession = [];
+
     try {
       let targetFolderId = activeFolderId;
       const finalFolderName = customSubmissionName.trim() || submissionType;
 
       if (accessToken) {
-        // 1. Create Student Folder inside Teacher's Drive
         const studentLabel = fullName.trim() || 'Student Name';
         const studentFolderName = section.trim()
           ? `[${section.trim()}] ${studentLabel}`
           : studentLabel;
 
         const studentFolder = await createDriveFolder(studentFolderName, activeFolderId, accessToken);
-        
-        // 2. Check if 'None' category is selected
+        if (studentFolder?.id) createdIdsThisSession.push(studentFolder.id);
+
         if (submissionType === 'None' && !customSubmissionName.trim()) {
-          // Direct upload into Student Folder
           targetFolderId = studentFolder.id;
         } else {
-          // Create Activity / Submission Subfolder inside Student Folder
           const submissionFolder = await createDriveFolder(finalFolderName, studentFolder.id, accessToken);
+          if (submissionFolder?.id) createdIdsThisSession.push(submissionFolder.id);
           targetFolderId = submissionFolder.id;
         }
       }
@@ -263,10 +319,13 @@ export default function App() {
           result = await uploadFileToDrive(file, targetFolderId, accessToken, (percent) => {
             setUploadProgress(percent);
           });
+          if (result?.id) createdIdsThisSession.push(result.id);
         }
         uploadedResults.push(result);
         setCompletedCount(i + 1);
       }
+
+      setMyCreatedIds((prev) => [...prev, ...createdIdsThisSession]);
 
       const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
       const randomStr = Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -284,7 +343,6 @@ export default function App() {
       setFiles([]);
       setLoaData(null);
 
-      // Refresh list in real-time
       if (accessToken && (currentFolderId || activeFolderId)) {
         loadFolderItems(currentFolderId || activeFolderId);
       }
@@ -330,7 +388,6 @@ export default function App() {
           </p>
         </div>
 
-        {/* Drive Status Warning Card */}
         <div className="glass-card rounded-2xl p-4 sm:p-5 space-y-3 transform-gpu transition-all duration-300">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-white/10 flex items-center justify-center text-amber-500 flex-shrink-0">
@@ -352,7 +409,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* Step 1 Card */}
         <div className="glass-card rounded-2xl p-4 sm:p-5 space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-3">
@@ -424,7 +480,6 @@ export default function App() {
           )}
         </div>
 
-        {/* Live Submissions Tracker & Folder Explorer Section */}
         {activeFolderId && (
           <div className="space-y-3">
             <div className="flex items-center justify-between px-1">
@@ -454,11 +509,14 @@ export default function App() {
             <FolderExplorer
               folderContents={folderContents}
               currentFolderId={currentFolderId || activeFolderId}
+              rootFolderId={activeFolderId}
               breadcrumbs={breadcrumbs}
               onBreadcrumbClick={handleBreadcrumbClick}
               onFolderClick={handleFolderClick}
+              onDeleteItem={handleDeleteItem}
+              onAddFilesToFolder={handleAddFilesToFolder}
               isLoading={isLoadingContents}
-              user={user}
+              myCreatedIds={myCreatedIds}
             />
 
             <div className="text-right">
@@ -570,7 +628,6 @@ export default function App() {
                 />
               </div>
 
-              {/* Dynamic Folder Structure Preview */}
               <div className="p-3 bg-slate-200/50 dark:bg-slate-900/60 rounded-xl border border-slate-300 dark:border-white/5 space-y-2">
                 <span className="text-[11px] text-slate-600 dark:text-slate-400 font-semibold flex items-center gap-1">
                   <Folder className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />

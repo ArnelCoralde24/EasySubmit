@@ -24,6 +24,8 @@ export const fetchFolderContents = async (folderId, accessToken) => {
   const response = await fetch(url, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache'
     },
   });
 
@@ -106,6 +108,8 @@ export const deleteDriveItem = async (fileOrFolderId, accessToken) => {
     method: 'DELETE',
     headers: {
       Authorization: `Bearer ${accessToken}`,
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache'
     },
   });
 
