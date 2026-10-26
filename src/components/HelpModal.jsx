@@ -5,8 +5,8 @@ export default function HelpModal({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md overflow-hidden animate-in fade-in duration-200">
-      <div className="relative w-full max-w-md sm:max-w-lg bg-slate-900 border border-slate-700/60 rounded-3xl p-5 sm:p-6 text-slate-100 shadow-2xl max-h-[85vh] sm:max-h-[90vh] flex flex-col justify-between">
+    <div className="fixed inset-0 z-[99999] bg-slate-950/80 backdrop-blur-md">
+      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[92vw] max-w-md sm:max-w-lg bg-slate-900 border border-slate-700/60 rounded-3xl p-5 sm:p-6 text-slate-100 shadow-2xl max-h-[85vh] flex flex-col justify-between animate-in fade-in zoom-in-95 duration-150">
         
         <button
           type="button"

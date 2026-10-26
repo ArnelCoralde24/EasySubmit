@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef } from "react";
 import { 
   Folder, UploadCloud, Send, CheckCircle2, Link2, Clipboard, X,
   BookOpen, FileCheck, Package, ExternalLink, ShieldAlert, History,
-  FileText, Trash2, Edit3, Users, RefreshCw, MinusCircle
+  FileText, Trash2, Edit3, Users, RefreshCw, MinusCircle, Home,
+  FolderOpen, HardDrive, Settings, Moon, Sun, User, Lock, Smartphone, KeyRound
 } from "lucide-react";
-import Header from "./components/Header";
 import FolderExplorer from "./components/FolderExplorer";
 import UploadProgressModal from './components/UploadProgressModal';
 import SubmissionReceiptModal from './components/SubmissionReceiptModal';
@@ -52,7 +52,6 @@ export default function App() {
   const [fullName, setFullName] = useState('');
   const [section, setSection] = useState('');
   const [subject, setSubject] = useState('');
-  const [studentId, setStudentId] = useState('');
   
   const [submissionType, setSubmissionType] = useState('Assignment');
   const [customSubmissionName, setCustomSubmissionName] = useState('');
@@ -69,10 +68,16 @@ export default function App() {
   const [receiptData, setReceiptData] = useState(null);
 
   useEffect(() => {
-    if (isHelpOpen || receiptData) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (isHelpOpen || receiptData || isUploading) {
+      document.body.style.overflow = 'hidden';
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    } else {
+      document.body.style.overflow = 'unset';
     }
-  }, [isHelpOpen, receiptData]);
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isHelpOpen, receiptData, isUploading]);
 
   useEffect(() => {
     localStorage.setItem('easysubmit_my_ids', JSON.stringify(myCreatedIds));
@@ -126,7 +131,7 @@ export default function App() {
     if (tokenClientRef.current) {
       tokenClientRef.current.requestAccessToken({ prompt: '' });
     } else {
-      alert('Google SDK script is still loading. Please try again in a moment.');
+      alert('Google SDK script is loading. Please try again.');
     }
   };
 
@@ -154,11 +159,9 @@ export default function App() {
     const targetFolder = currentFolderId || activeFolderId;
     if (targetFolder && accessToken) {
       loadFolderItems(targetFolder);
-
       const interval = setInterval(() => {
         loadFolderItems(targetFolder, true);
       }, 5000);
-
       return () => clearInterval(interval);
     }
   }, [activeFolderId, currentFolderId, accessToken]);
@@ -176,7 +179,6 @@ export default function App() {
 
   const handleDeleteItem = async (itemId) => {
     if (!accessToken) return;
-
     setFolderContents((prev) => prev.filter((item) => item.id !== itemId));
     setMyCreatedIds((prev) => prev.filter((id) => id !== itemId));
 
@@ -184,20 +186,18 @@ export default function App() {
       await deleteDriveItem(itemId, accessToken);
       await loadFolderItems(currentFolderId || activeFolderId, true);
     } catch (err) {
-      alert('Failed to delete item from Google Drive: ' + err.message);
+      alert('Failed to delete item: ' + err.message);
       loadFolderItems(currentFolderId || activeFolderId);
     }
   };
 
   const handleAddFilesToFolder = async (filesToAdd, targetFolderId) => {
     if (!accessToken || !targetFolderId) return;
-
     setIsUploading(true);
     setUploadError('');
     setCompletedCount(0);
 
     const newlyCreated = [];
-
     try {
       for (let i = 0; i < filesToAdd.length; i++) {
         const file = filesToAdd[i];
@@ -238,7 +238,7 @@ export default function App() {
       setDriveInput(text);
       handleVerifyFolder(text);
     } catch (err) {
-      alert('Clipboard permission is required by your browser.');
+      alert('Clipboard permission required.');
     }
   };
 
@@ -259,10 +259,10 @@ export default function App() {
   };
 
   const categories = [
-    { id: 'None', title: 'None (Direct to Name Folder)', sub: 'Direct upload to student folder', icon: MinusCircle },
-    { id: 'Assignment', title: 'Assignment', sub: '/Assignments', icon: BookOpen },
-    { id: 'Activity', title: 'Activity / Worksheet', sub: '/Activities', icon: FileCheck },
-    { id: 'Project', title: 'Project / PETA', sub: '/Projects', icon: Package },
+    { id: 'None', title: 'None', sub: '(Direct to Name Folder)', icon: MinusCircle },
+    { id: 'Assignment', title: 'Assignment', sub: '/ Assignments', icon: BookOpen },
+    { id: 'Activity', title: 'Activity / Worksheet', sub: '/ Activities', icon: FileCheck },
+    { id: 'Project', title: 'Project / PETA', sub: '/ Projects', icon: Package },
   ];
 
   const handleSubmission = async (e) => {
@@ -364,106 +364,348 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen w-full overflow-x-hidden bg-slate-100 dark:bg-[#070a12] text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-300 ease-out will-change-transform">
-      <Header
-        darkMode={darkMode}
-        setDarkMode={setDarkMode}
-        user={user}
-        onSignIn={handleConnectDrive}
-        onSignOut={handleSignOut}
-        onOpenHelp={() => setIsHelpOpen(true)}
-      />
+    <div className="min-h-screen w-full bg-[#050814] text-white flex flex-col font-sans relative overflow-x-hidden">
+      
+      {/* Background Neon Glowing Liquid Orbs */}
+      <div className="fixed -top-32 -left-32 w-96 h-96 bg-blue-600/25 rounded-full blur-[120px] pointer-events-none" />
+      <div className="fixed top-1/2 right-0 w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-[140px] pointer-events-none" />
+      <div className="fixed -bottom-40 left-1/3 w-96 h-96 bg-cyan-500/20 rounded-full blur-[130px] pointer-events-none" />
 
-      <main className="flex-1 max-w-xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
-        
-        <div className="text-center space-y-3">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 text-xs font-semibold rounded-full transform-gpu transition-all duration-300 hover:scale-105">
-            <span>✨ Fast, Multi-Device Responsive Submissions Portal</span>
+      {/* Top Navbar */}
+      <header className="sticky top-0 z-40 w-full backdrop-blur-xl bg-slate-950/60 border-b border-white/10 px-4 sm:px-8 py-3.5 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center font-black text-lg text-white shadow-[0_0_20px_rgba(37,99,235,0.5)]">
+            ES
           </div>
-
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
-            Submit Homework <br /> Directly to Google Drive
-          </h1>
-
-          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
-            Paste the teacher's folder link, enter your name & section, and EasySubmit will organize your personal folder and upload your files directly to Drive.
-          </p>
+          <span className="font-black text-xl tracking-tight text-white">EasySubmit</span>
         </div>
 
-        <div className="glass-card rounded-2xl p-4 sm:p-5 space-y-3 transform-gpu transition-all duration-300">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-white/10 flex items-center justify-center text-amber-500 flex-shrink-0">
-              <span className="font-extrabold text-sm">G</span>
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-bold text-slate-900 dark:text-white">Google Drive Status:</span>
-                <span className={`text-xs font-bold ${accessToken ? 'text-emerald-500' : 'text-amber-500'}`}>
-                  {accessToken ? 'Connected' : 'Not Connected'}
-                </span>
+        {/* Center Pill Nav */}
+        <nav className="hidden md:flex items-center gap-1 bg-white/5 border border-white/10 p-1 rounded-2xl backdrop-blur-md">
+          <button type="button" className="px-4 py-1.5 rounded-xl bg-blue-600 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-blue-600/30">
+            <Home className="w-4 h-4" />
+            <span>Home</span>
+          </button>
+          <button type="button" onClick={() => setIsHelpOpen(true)} className="px-4 py-1.5 rounded-xl text-slate-300 hover:text-white font-semibold text-xs flex items-center gap-2 hover:bg-white/5 transition">
+            <BookOpen className="w-4 h-4" />
+            <span>How It Works</span>
+          </button>
+          <a href={`https://drive.google.com/drive/folders/${currentFolderId || activeFolderId || ''}`} target="_blank" rel="noreferrer" className="px-4 py-1.5 rounded-xl text-slate-300 hover:text-white font-semibold text-xs flex items-center gap-2 hover:bg-white/5 transition">
+            <FolderOpen className="w-4 h-4" />
+            <span>Drive</span>
+          </a>
+        </nav>
+
+        {/* Header Right Actions */}
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setDarkMode(!darkMode)}
+            className="p-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-slate-300 transition"
+          >
+            {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </button>
+
+          {accessToken ? (
+            <div className="flex items-center gap-2.5 bg-blue-950/60 border border-blue-500/30 px-3 py-1.5 rounded-2xl">
+              <div className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold text-xs">
+                {user?.name?.[0] || 'U'}
               </div>
-              <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
-                {accessToken 
-                  ? `Connected as: ${user?.name || user?.email || 'Google User'}`
-                  : 'Click the "Connect Drive" button in the top header bar to sign in.'}
+              <span className="text-xs font-semibold truncate max-w-[100px] sm:max-w-none">{user?.name || 'Connected'}</span>
+              <button type="button" onClick={handleSignOut} className="text-[10px] text-red-400 hover:underline font-bold ml-1">Sign Out</button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={handleConnectDrive}
+              className="px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-bold rounded-2xl text-xs flex items-center gap-2 shadow-lg shadow-blue-600/30 active:scale-95 transition-all"
+            >
+              <User className="w-4 h-4" />
+              <span>Connect Drive</span>
+            </button>
+          )}
+        </div>
+      </header>
+
+      {/* Main Grid Layout Container */}
+      <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6 relative z-10">
+        
+        {/* Left Navigation Sidebar (Desktop) */}
+        <aside className="hidden lg:flex lg:col-span-3 flex-col justify-between bg-white/5 border border-white/10 rounded-3xl p-5 backdrop-blur-2xl">
+          <div className="space-y-2">
+            <button type="button" className="w-full flex items-center gap-3 px-4 py-3 bg-blue-600 text-white font-bold rounded-2xl text-xs shadow-lg shadow-blue-600/30 transition">
+              <Home className="w-4 h-4" />
+              <span>Home</span>
+            </button>
+            <button type="button" onClick={() => setIsHelpOpen(true)} className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 font-semibold rounded-2xl text-xs transition">
+              <BookOpen className="w-4 h-4" />
+              <span>Submit Homework</span>
+            </button>
+            <a href={`https://drive.google.com/drive/folders/${currentFolderId || activeFolderId || ''}`} target="_blank" rel="noreferrer" className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 font-semibold rounded-2xl text-xs transition">
+              <HardDrive className="w-4 h-4" />
+              <span>Google Drive</span>
+            </a>
+          </div>
+
+          <div className="p-4 bg-gradient-to-br from-blue-900/40 to-purple-900/40 border border-blue-500/20 rounded-2xl space-y-2 text-xs">
+            <p className="font-bold text-white">Small steps</p>
+            <p className="text-slate-300 text-[11px]">make big progress.</p>
+          </div>
+        </aside>
+
+        {/* Middle Main Form Area */}
+        <main className="lg:col-span-6 space-y-6">
+          
+          {/* Banner Hero Card */}
+          <div className="relative overflow-hidden bg-gradient-to-br from-blue-900/60 via-indigo-900/40 to-purple-900/60 border border-blue-500/30 rounded-3xl p-6 sm:p-8 backdrop-blur-2xl shadow-[0_0_40px_rgba(37,99,235,0.25)]">
+            <div className="relative z-10 max-w-lg space-y-3">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-500/20 border border-blue-500/40 text-cyan-300 text-[11px] font-bold rounded-full">
+                <span>⚡ Fast, Multi-Device Responsive Submissions Portal</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-black text-white leading-tight">
+                Submit Homework <br /> Directly to Google Drive
+              </h1>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Paste the teacher's folder link, enter your name & section, and EasySubmit will organize your personal folder and upload your files directly to Drive.
               </p>
             </div>
+            {/* Liquid Sphere Graphic */}
+            <div className="absolute top-1/2 -right-10 -translate-y-1/2 w-48 h-48 bg-gradient-to-tr from-cyan-400 via-blue-600 to-purple-600 rounded-full blur-sm opacity-80 animate-pulse hidden sm:block pointer-events-none" />
           </div>
-        </div>
 
-        <div className="glass-card rounded-2xl p-4 sm:p-5 space-y-4">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div className="flex items-center gap-3">
-              <div className="w-7 h-7 rounded-lg bg-blue-500/10 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 border border-blue-500/20 dark:border-blue-500/30 flex items-center justify-center font-bold text-xs">
-                1
+          <form onSubmit={handleSubmission} className="space-y-6">
+            
+            {/* Step 1: Student & Submission Info */}
+            <div className="bg-white/5 border border-white/10 rounded-3xl p-5 sm:p-6 backdrop-blur-2xl space-y-5">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-blue-600/30 text-cyan-400 border border-blue-500/40 flex items-center justify-center font-bold text-xs shadow-md">
+                  1
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">Student & Submission Info</h3>
+                  <p className="text-[11px] text-slate-400">EasySubmit creates your personal folder using your info</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Teacher's Google Drive Link</h3>
-                <p className="text-[11px] text-slate-600 dark:text-slate-400">Paste the folder link shared by your teacher</p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">👤 Full Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Juan Dela Cruz"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-900/80 border border-white/10 rounded-2xl text-white outline-none focus:border-cyan-400 transition"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">🎓 Class Section / Year (Optional)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. BSBA MM 3A"
+                    value={section}
+                    onChange={(e) => setSection(e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-900/80 border border-white/10 rounded-2xl text-white outline-none focus:border-cyan-400 transition"
+                  />
+                </div>
+              </div>
+
+              <div className="text-xs space-y-3">
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">📖 Subject / Subject Code (Optional)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. GGASR"
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-900/80 border border-white/10 rounded-2xl text-white outline-none focus:border-cyan-400 transition"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-300 font-bold mb-2">What are you submitting?</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {categories.map((cat) => {
+                      const IconComp = cat.icon;
+                      const isSelected = submissionType === cat.id;
+                      return (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          onClick={() => setSubmissionType(cat.id)}
+                          className={`p-3.5 rounded-2xl border text-left flex items-center gap-3 transition-all duration-200 active:scale-95 ${
+                            isSelected
+                              ? 'bg-gradient-to-r from-blue-600/40 to-cyan-600/30 border-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.3)] ring-1 ring-cyan-400'
+                              : 'bg-slate-900/60 border-white/5 hover:border-white/20'
+                          }`}
+                        >
+                          <IconComp className={`w-5 h-5 flex-shrink-0 ${isSelected ? 'text-cyan-300' : 'text-slate-400'}`} />
+                          <div className="min-w-0">
+                            <p className={`font-bold text-xs ${isSelected ? 'text-white' : 'text-slate-300'}`}>{cat.title}</p>
+                            <p className="text-[10px] text-slate-500 truncate">{cat.sub}</p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             </div>
-            <button 
-              type="button"
-              onClick={() => {
-                const demo = "https://drive.google.com/drive/folders/1FS6qxRC7txbzYYmDemoId";
-                setDriveInput(demo);
-                handleVerifyFolder(demo);
-              }}
-              className="px-2.5 py-1 bg-blue-500/10 dark:bg-blue-900/30 hover:bg-blue-500/20 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 border border-blue-500/20 dark:border-blue-500/30 rounded-lg text-[11px] font-semibold transition-all duration-200"
-            >
-              ✨ Demo Link
-            </button>
+
+            {/* Step 2: Submission Title */}
+            <div className="bg-white/5 border border-white/10 rounded-3xl p-5 sm:p-6 backdrop-blur-2xl space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-blue-600/30 text-cyan-400 border border-blue-500/40 flex items-center justify-center font-bold text-xs shadow-md">
+                  2
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">Submission Title / Activity Name (Optional)</h3>
+                </div>
+              </div>
+              <input
+                type="text"
+                placeholder={`e.g. ${submissionType === 'None' ? 'Activity Name' : submissionType} 1 - Midterm Essay`}
+                value={customSubmissionName}
+                onChange={(e) => setCustomSubmissionName(e.target.value)}
+                className="w-full px-4 py-3 bg-slate-900/80 border border-white/10 rounded-2xl text-xs text-white outline-none focus:border-cyan-400 transition"
+              />
+            </div>
+
+            {/* Step 3: Select School Files */}
+            <div className="bg-white/5 border border-white/10 rounded-3xl p-5 sm:p-6 backdrop-blur-2xl space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-cyan-600/30 text-cyan-400 border border-cyan-500/40 flex items-center justify-center font-bold text-xs shadow-md">
+                  3
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">Select School Files</h3>
+                  <p className="text-[11px] text-slate-400">Drag & drop or tap to choose files from your device</p>
+                </div>
+              </div>
+
+              <div 
+                onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                className="border-2 border-dashed border-blue-500/40 hover:border-cyan-400 rounded-3xl p-6 text-center space-y-3 bg-slate-900/40 cursor-pointer transition-all hover:scale-[1.01]"
+              >
+                <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileChange} />
+                <div className="w-12 h-12 rounded-2xl bg-blue-600/20 text-cyan-400 border border-blue-500/30 flex items-center justify-center mx-auto shadow-lg shadow-blue-500/20">
+                  <UploadCloud className="w-6 h-6" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-white">Drag and drop your files here</p>
+                  <p className="text-[11px] text-cyan-400 hover:underline">or browse from your device / storage</p>
+                </div>
+                <div className="flex flex-wrap justify-center gap-1.5 pt-1">
+                  {['PDF', 'DOCX', 'PPTX', 'JPG / PNG', 'XLSX', 'TXT'].map((ext) => (
+                    <span key={ext} className="px-2.5 py-1 bg-slate-800 text-slate-400 rounded-lg text-[10px] font-mono border border-white/5">
+                      {ext}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {files.length > 0 && (
+                <div className="space-y-2 pt-2 text-xs">
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-slate-300">Selected Files ({files.length})</span>
+                    <button type="button" onClick={() => setFiles([])} className="text-red-400 hover:underline font-semibold text-[11px]">Clear All</button>
+                  </div>
+                  <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                    {files.map((file, idx) => (
+                      <div key={idx} className="flex justify-between items-center p-3 bg-slate-900/90 border border-white/10 rounded-2xl">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <FileText className="w-4 h-4 text-cyan-400 flex-shrink-0" />
+                          <span className="truncate font-medium text-slate-200">{file.name}</span>
+                        </div>
+                        <button type="button" onClick={() => handleRemoveFile(idx)} className="p-1 text-slate-400 hover:text-red-400">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Folder Explorer Section */}
+            {activeFolderId && (
+              <div className="space-y-3">
+                <div className="flex justify-between items-center px-1">
+                  <span className="text-xs font-bold text-slate-200 flex items-center gap-2">
+                    <Users className="w-4 h-4 text-cyan-400" />
+                    Folder Submissions ({folderContents.length})
+                  </span>
+                  {accessToken && (
+                    <button type="button" onClick={() => loadFolderItems(currentFolderId || activeFolderId)} className="text-[11px] text-cyan-400 hover:underline flex items-center gap-1 font-semibold">
+                      <RefreshCw className={`w-3 h-3 ${isLoadingContents ? 'animate-spin' : ''}`} />
+                      <span>Refresh</span>
+                    </button>
+                  )}
+                </div>
+                <FolderExplorer
+                  folderContents={folderContents}
+                  currentFolderId={currentFolderId || activeFolderId}
+                  rootFolderId={activeFolderId}
+                  breadcrumbs={breadcrumbs}
+                  onBreadcrumbClick={handleBreadcrumbClick}
+                  onFolderClick={handleFolderClick}
+                  onDeleteItem={handleDeleteItem}
+                  onAddFilesToFolder={handleAddFilesToFolder}
+                  isLoading={isLoadingContents}
+                  myCreatedIds={myCreatedIds}
+                />
+              </div>
+            )}
+          </form>
+        </main>
+
+        {/* Right Status Sidebar */}
+        <aside className="lg:col-span-3 space-y-6">
+          
+          {/* Google Drive Status Widget */}
+          <div className="bg-white/5 border border-white/10 rounded-3xl p-5 backdrop-blur-2xl space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 flex items-center justify-center flex-shrink-0">
+                <Link2 className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                  Google Drive Status
+                  <span className={`w-2 h-2 rounded-full ${accessToken ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+                </p>
+                <p className="text-[11px] text-slate-400 truncate">{accessToken ? 'Linked & ready' : 'Not Connected'}</p>
+              </div>
+            </div>
+            {!accessToken && (
+              <button
+                type="button"
+                onClick={handleConnectDrive}
+                className="w-full py-2 bg-blue-600/30 hover:bg-blue-600/50 text-cyan-300 border border-blue-500/30 rounded-xl text-xs font-bold transition"
+              >
+                Reconnect Drive
+              </button>
+            )}
           </div>
 
-          <div className="relative flex items-center">
-            <Link2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 absolute left-3.5" />
-            <input
-              type="text"
-              placeholder="https://drive.google.com/..."
-              value={driveInput}
-              onChange={(e) => {
-                setDriveInput(e.target.value);
-                handleVerifyFolder(e.target.value);
-              }}
-              className="w-full pl-9 pr-36 py-2.5 bg-white dark:bg-emerald-950/20 border border-slate-300 dark:border-emerald-500/40 rounded-xl text-xs text-slate-900 dark:text-white outline-none focus:border-emerald-500 transition-all duration-200"
-            />
-
-            <div className="absolute right-1.5 flex items-center gap-1">
-              {driveInput && (
-                <button
-                  type="button"
-                  onClick={handleClearDriveInput}
-                  className="px-2 py-1.5 bg-slate-200 dark:bg-slate-800/80 hover:bg-red-500/10 text-slate-700 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-400 border border-slate-300 dark:border-white/10 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all duration-200"
-                >
-                  <X className="w-3 h-3" />
-                  <span>Clear</span>
-                </button>
-              )}
-
+          {/* Teacher's Link Box */}
+          <div className="bg-white/5 border border-white/10 rounded-3xl p-5 backdrop-blur-2xl space-y-3">
+            <p className="text-xs font-bold text-white">Teacher's Link</p>
+            <div className="relative flex items-center">
+              <input
+                type="text"
+                placeholder="https://drive.google.com/..."
+                value={driveInput}
+                onChange={(e) => {
+                  setDriveInput(e.target.value);
+                  handleVerifyFolder(e.target.value);
+                }}
+                className="w-full pl-3 pr-16 py-2.5 bg-slate-900/80 border border-white/10 rounded-xl text-xs text-white outline-none focus:border-cyan-400 transition"
+              />
               <button
                 type="button"
                 onClick={handlePaste}
-                className="px-3 py-1.5 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-white/10 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all duration-200"
+                className="absolute right-1 px-3 py-1 bg-blue-600 text-white font-bold rounded-lg text-xs flex items-center gap-1 shadow-md"
               >
                 <Clipboard className="w-3 h-3" />
                 <span>Paste</span>
@@ -471,291 +713,51 @@ export default function App() {
             </div>
           </div>
 
-          {activeFolderId && (
-            <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl space-y-1 text-xs">
-              <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold">
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Drive Folder Detected</span>
-              </div>
-              <p className="text-[10px] text-emerald-600 dark:text-emerald-400/80">🔒 Ready for uploads</p>
-            </div>
-          )}
-        </div>
-
-        {activeFolderId && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between px-1">
-              <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-blue-500" />
-                <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                  Folder Submissions & Subfolders ({folderContents.length})
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                  </span>
-                </h3>
-              </div>
-
-              {accessToken && (
-                <button
-                  type="button"
-                  onClick={() => loadFolderItems(currentFolderId || activeFolderId)}
-                  className="flex items-center gap-1 text-[11px] text-blue-600 dark:text-blue-400 hover:underline font-semibold"
-                >
-                  <RefreshCw className={`w-3 h-3 ${isLoadingContents ? 'animate-spin' : ''}`} />
-                  <span>Refresh List</span>
-                </button>
+          {/* Folder Structure Preview Card */}
+          <div className="bg-white/5 border border-white/10 rounded-3xl p-5 backdrop-blur-2xl space-y-3 text-xs">
+            <p className="font-bold text-white flex items-center gap-2">
+              <FolderOpen className="w-4 h-4 text-cyan-400" />
+              Folder Structure Preview:
+            </p>
+            <div className="pl-2 space-y-1 font-mono text-[11px]">
+              <p className="text-slate-400">Teacher's Drive &gt;</p>
+              <p className="text-cyan-300 pl-3">📁 {section.trim() ? `[${section.trim()}] ` : ''}{fullName || 'Student Name'}</p>
+              {(submissionType !== 'None' || customSubmissionName.trim()) && (
+                <p className="text-blue-400 pl-6">📁 {customSubmissionName.trim() || submissionType}</p>
               )}
             </div>
-
-            <FolderExplorer
-              folderContents={folderContents}
-              currentFolderId={currentFolderId || activeFolderId}
-              rootFolderId={activeFolderId}
-              breadcrumbs={breadcrumbs}
-              onBreadcrumbClick={handleBreadcrumbClick}
-              onFolderClick={handleFolderClick}
-              onDeleteItem={handleDeleteItem}
-              onAddFilesToFolder={handleAddFilesToFolder}
-              isLoading={isLoadingContents}
-              myCreatedIds={myCreatedIds}
-            />
-
-            <div className="text-right">
-              <a
-                href={`https://drive.google.com/drive/folders/${currentFolderId || activeFolderId}`}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 hover:text-blue-500 transition-colors duration-200"
-              >
-                <span>Open full folder in Google Drive</span>
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            </div>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmission} className="space-y-6">
-          <div className="glass-card rounded-2xl p-4 sm:p-5 space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-7 h-7 rounded-lg bg-blue-500/10 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 border border-blue-500/20 dark:border-blue-500/30 flex items-center justify-center font-bold text-xs">
-                2
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Student & Submission Info</h3>
-                <p className="text-[11px] text-slate-600 dark:text-slate-400">EasySubmit creates your personal folder using your info</p>
-              </div>
-            </div>
-
-            <div className="space-y-3 text-xs">
-              <div>
-                <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">👤 Student Full Name *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Juan Dela Cruz"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900/80 border border-slate-300 dark:border-white/10 rounded-xl text-slate-900 dark:text-white outline-none focus:border-blue-500 transition-all duration-200"
-                />
-                <span className="text-[10px] text-slate-500 mt-0.5 block">Format: Last Name, First Name</span>
-              </div>
-
-              <div>
-                <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">🏫 Class Section / Year (Optional)</label>
-                <input
-                  type="text"
-                  placeholder="e.g. BSBA MM 3A"
-                  value={section}
-                  onChange={(e) => setSection(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900/80 border border-slate-300 dark:border-white/10 rounded-xl text-slate-900 dark:text-white outline-none focus:border-blue-500 transition-all duration-200"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">📖 Subject / Subject Code (Optional)</label>
-                <input
-                  type="text"
-                  placeholder="e.g. GGASR"
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900/80 border border-slate-300 dark:border-white/10 rounded-xl text-slate-900 dark:text-white outline-none focus:border-blue-500 transition-all duration-200"
-                />
-              </div>
-
-              <div className="pt-2">
-                <label className="block text-slate-800 dark:text-slate-200 font-bold mb-2">What are you submitting?</label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {categories.map((cat) => {
-                    const IconComp = cat.icon;
-                    const isSelected = submissionType === cat.id;
-                    return (
-                      <button
-                        key={cat.id}
-                        type="button"
-                        onClick={() => setSubmissionType(cat.id)}
-                        className={`p-3 rounded-xl border text-left flex flex-col justify-between space-y-2 transform-gpu transition-all duration-200 active:scale-98 ${
-                          isSelected
-                            ? 'bg-blue-500/10 dark:bg-blue-950/60 border-blue-500 shadow-md ring-1 ring-blue-500/50'
-                            : 'bg-white dark:bg-slate-900/40 border-slate-200 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/20'
-                        }`}
-                      >
-                        <IconComp className={`w-5 h-5 ${isSelected ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'}`} />
-                        <div>
-                          <p className={`font-bold text-xs ${isSelected ? 'text-blue-900 dark:text-white' : 'text-slate-700 dark:text-slate-300'}`}>
-                            {cat.title}
-                          </p>
-                          <p className="text-[10px] text-slate-500 truncate">{cat.sub}</p>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="pt-1">
-                <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1 flex items-center gap-1.5">
-                  <Edit3 className="w-3.5 h-3.5 text-blue-500" />
-                  <span>Submission Title / Activity Name (Optional)</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder={`e.g. ${submissionType === 'None' ? 'Activity Name' : submissionType} 1 - Midterm Essay`}
-                  value={customSubmissionName}
-                  onChange={(e) => setCustomSubmissionName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900/80 border border-slate-300 dark:border-white/10 rounded-xl text-slate-900 dark:text-white outline-none focus:border-blue-500 transition-all duration-200"
-                />
-              </div>
-
-              <div className="p-3 bg-slate-200/50 dark:bg-slate-900/60 rounded-xl border border-slate-300 dark:border-white/5 space-y-2">
-                <span className="text-[11px] text-slate-600 dark:text-slate-400 font-semibold flex items-center gap-1">
-                  <Folder className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                  Folder Structure That Will Be Created in Drive:
-                </span>
-                <div className="pl-2 space-y-1 font-mono text-[11px]">
-                  <p className="text-slate-500 dark:text-slate-400">Teacher's Drive &gt;</p>
-                  <p className="text-blue-600 dark:text-blue-300 pl-3">
-                    📁 {section.trim() ? `[${section.trim()}] ` : ''}{fullName || 'Student Name'}
-                  </p>
-                  {(submissionType !== 'None' || customSubmissionName.trim()) && (
-                    <p className="text-blue-500 dark:text-blue-400 pl-6">
-                      📁 {customSubmissionName.trim() || submissionType}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
           </div>
 
-          <div className="glass-card rounded-2xl p-4 sm:p-5 space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-7 h-7 rounded-lg bg-emerald-500/10 dark:bg-emerald-600/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 dark:border-emerald-500/30 flex items-center justify-center font-bold text-xs">
-                3
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Select School Files</h3>
-                <p className="text-[11px] text-slate-600 dark:text-slate-400">Drag & drop or tap to choose files from your device</p>
-              </div>
-            </div>
-
-            <div 
-              onClick={() => fileInputRef.current && fileInputRef.current.click()}
-              className="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-blue-500 rounded-2xl p-6 text-center space-y-3 relative bg-white/50 dark:bg-slate-900/40 cursor-pointer transform-gpu transition-all duration-200 hover:scale-[1.01]"
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                className="hidden"
-                onChange={handleFileChange}
-              />
-              <div className="w-12 h-12 rounded-2xl bg-blue-500/10 dark:bg-blue-600/20 border border-blue-500/20 dark:border-blue-500/30 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto">
-                <UploadCloud className="w-6 h-6" />
-              </div>
-              <div>
-                <p className="text-xs font-bold text-slate-800 dark:text-white">Drag and drop your assignments here</p>
-                <p className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline">or browse from your phone / storage</p>
-              </div>
-
-              <div className="flex flex-wrap justify-center gap-1.5 pt-1">
-                {['PDF', 'DOCX', 'PPTX', 'JPG / PNG', 'XLSX', 'TXT'].map((ext) => (
-                  <span key={ext} className="px-2 py-0.5 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded text-[10px] font-mono border border-slate-300 dark:border-white/5">
-                    {ext}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {files.length > 0 && (
-              <div className="space-y-2 pt-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-slate-700 dark:text-slate-300">
-                    Selected Files ({files.length})
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setFiles([])}
-                    className="text-[11px] text-red-500 hover:underline font-semibold"
-                  >
-                    Clear All
-                  </button>
-                </div>
-
-                <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                  {files.map((file, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center justify-between p-2.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-white/10 text-xs shadow-sm transform-gpu transition-all duration-150"
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                        <FileText className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                        <div className="min-w-0">
-                          <p className="font-semibold text-slate-800 dark:text-slate-200 truncate">{file.name}</p>
-                          <p className="text-[10px] text-slate-400">{formatFileSize(file.size)}</p>
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveFile(idx)}
-                        className="p-1 text-slate-400 hover:text-red-500 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-150 flex-shrink-0"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={!accessToken}
-              className={`w-full py-3 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transform-gpu transition-all duration-200 ${
-                accessToken
-                  ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20 active:scale-98 cursor-pointer'
-                  : 'bg-slate-300 dark:bg-slate-800 text-slate-500 dark:text-slate-500 cursor-not-allowed opacity-60'
-              }`}
-            >
-              <span>{accessToken ? 'Submit to Google Drive' : 'Please Connect Drive to Submit'}</span>
-              <Send className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </form>
-
-        <footer className="text-center space-y-1.5 pt-4 text-xs text-slate-500">
-          <p className="font-semibold text-slate-600 dark:text-slate-400">EasySubmit • Direct School Submission Portal</p>
-          <a
-            href="https://www.facebook.com/arnelcoraldeMA"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block px-3 py-1 bg-slate-200 dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-white/5 rounded-full text-[11px] hover:text-blue-500 transition-colors duration-200"
+          {/* Big Neon Connect / Submit Action Button */}
+          <button
+            type="submit"
+            onClick={handleSubmission}
+            disabled={!accessToken}
+            className={`w-full py-4 font-black rounded-3xl text-sm flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(37,99,235,0.4)] transition-all active:scale-95 ${
+              accessToken
+                ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 text-white cursor-pointer hover:shadow-[0_0_40px_rgba(34,211,238,0.6)]'
+                : 'bg-slate-800 text-slate-500 border border-white/5 cursor-not-allowed opacity-60'
+            }`}
           >
-            Created By NatsumiKieko
-          </a>
-        </footer>
+            <Send className="w-4 h-4" />
+            <span>{accessToken ? 'Submit to Google Drive' : 'Connect Drive to Submit'}</span>
+          </button>
+        </aside>
 
-      </main>
+      </div>
+
+      {/* Footer */}
+      <footer className="w-full text-center py-6 text-xs text-slate-400 border-t border-white/5 relative z-10">
+        <p>EasySubmit • Direct School Submission Portal</p>
+        <a
+          href="https://www.facebook.com/arnelcoraldeMA"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-block mt-1 text-cyan-400 hover:underline font-semibold"
+        >
+          Created By NatsumiKieko
+        </a>
+      </footer>
 
       <UploadProgressModal
         isOpen={isUploading}

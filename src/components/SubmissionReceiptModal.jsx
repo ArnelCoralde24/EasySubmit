@@ -5,8 +5,8 @@ export default function SubmissionReceiptModal({ receiptData, onClose }) {
   if (!receiptData) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md overflow-hidden animate-in fade-in duration-200">
-      <div className="relative w-full max-w-md sm:max-w-lg bg-slate-900 border border-slate-700/60 rounded-3xl p-5 sm:p-6 space-y-4 text-slate-100 shadow-2xl max-h-[85vh] sm:max-h-[90vh] flex flex-col justify-between">
+    <div className="fixed inset-0 z-[99999] bg-slate-950/80 backdrop-blur-md">
+      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[92vw] max-w-md sm:max-w-lg bg-slate-900 border border-slate-700/60 rounded-3xl p-5 sm:p-6 text-slate-100 shadow-2xl max-h-[85vh] flex flex-col justify-between animate-in fade-in zoom-in-95 duration-150">
         
         <button
           type="button"
@@ -24,7 +24,7 @@ export default function SubmissionReceiptModal({ receiptData, onClose }) {
           <p className="text-xs text-slate-400">Your files have been safely created & uploaded to Google Drive.</p>
         </div>
 
-        <div className="p-4 bg-slate-800/70 rounded-2xl border border-slate-700/50 space-y-2.5 text-xs overflow-y-auto flex-1 my-2">
+        <div className="p-4 bg-slate-800/70 rounded-2xl border border-slate-700/50 space-y-2.5 text-xs overflow-y-auto flex-1 my-3">
           <div className="flex justify-between items-center border-b border-white/5 pb-2">
             <span className="text-slate-400">Receipt ID:</span>
             <span className="font-mono text-emerald-400 font-bold">{receiptData.receiptId}</span>
