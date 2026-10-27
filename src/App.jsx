@@ -11,6 +11,7 @@ import SubmissionReceiptModal from './components/SubmissionReceiptModal';
 import HelpModal from './components/HelpModal';
 import SettingsModal from './components/SettingsModal';
 import HistoryModal from './components/HistoryModal';
+import PrivacyModal from './components/PrivacyModal';
 import { 
   extractFolderId, 
   fetchFolderContents, 
@@ -74,6 +75,7 @@ export default function App() {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -87,7 +89,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (isHelpOpen || receiptData || isUploading || isSettingsOpen || isHistoryOpen) {
+    if (isHelpOpen || receiptData || isUploading || isSettingsOpen || isHistoryOpen || isPrivacyOpen) {
       document.body.style.overflow = 'hidden';
       window.scrollTo({ top: 0, behavior: 'instant' });
     } else {
@@ -96,7 +98,7 @@ export default function App() {
     return () => {
       document.body.style.overflow = 'unset';
     };
-  }, [isHelpOpen, receiptData, isUploading, isSettingsOpen, isHistoryOpen]);
+  }, [isHelpOpen, receiptData, isUploading, isSettingsOpen, isHistoryOpen, isPrivacyOpen]);
 
   useEffect(() => {
     localStorage.setItem('easysubmit_my_ids', JSON.stringify(myCreatedIds));
@@ -812,16 +814,26 @@ export default function App() {
 
       </div>
 
-      <footer className="w-full text-center py-6 text-xs text-slate-400 border-t border-white/5 relative z-10">
+      <footer className="w-full text-center py-6 text-xs text-slate-400 border-t border-white/5 relative z-10 space-y-2">
         <p>EasySubmit • Direct School Submission Portal</p>
-        <a
-          href="https://www.facebook.com/arnelcoraldeMA"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-block mt-1 text-cyan-400 hover:underline font-semibold"
-        >
-          Created By NatsumiKieko
-        </a>
+        <div className="flex items-center justify-center gap-4 text-[11px]">
+          <button
+            type="button"
+            onClick={() => setIsPrivacyOpen(true)}
+            className="text-cyan-400 hover:underline font-semibold"
+          >
+            Privacy Policy & Terms
+          </button>
+          <span className="text-slate-600">•</span>
+          <a
+            href="https://www.facebook.com/arnelcoraldeMA"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-cyan-400 hover:underline font-semibold"
+          >
+            Created By NatsumiKieko
+          </a>
+        </div>
       </footer>
 
       <UploadProgressModal
@@ -851,6 +863,10 @@ export default function App() {
         onClearHistory={handleClearHistory}
         onDeleteHistoryItem={handleDeleteHistoryItem}
         currentUserEmail={user?.email}
+      />
+      <PrivacyModal
+        isOpen={isPrivacyOpen}
+        onClose={() => setIsPrivacyOpen(false)}
       />
     </div>
   );
