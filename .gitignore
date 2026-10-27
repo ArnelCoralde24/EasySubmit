@@ -7,10 +7,14 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Build and Dependencies
 node_modules
 dist
 dist-ssr
 *.local
+.env
+.wrangler
+dist/wrangler.json
 
 # Editor directories and files
 .vscode/*
