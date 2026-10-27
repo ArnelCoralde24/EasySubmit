@@ -141,7 +141,7 @@ export default function App() {
     });
   };
 
-  useEffect(() => {
+  const initGoogleClient = () => {
     if (window.google?.accounts?.oauth2) {
       tokenClientRef.current = window.google.accounts.oauth2.initTokenClient({
         client_id: GOOGLE_CLIENT_ID,
@@ -171,14 +171,31 @@ export default function App() {
           }
         },
       });
+      return true;
+    }
+    return false;
+  };
+
+  useEffect(() => {
+    if (!initGoogleClient()) {
+      const interval = setInterval(() => {
+        if (initGoogleClient()) {
+          clearInterval(interval);
+        }
+      }, 500);
+      return () => clearInterval(interval);
     }
   }, []);
 
   const handleConnectDrive = () => {
     if (tokenClientRef.current) {
       tokenClientRef.current.requestAccessToken({ prompt: '' });
+    } else if (window.google?.accounts?.oauth2) {
+      if (initGoogleClient()) {
+        tokenClientRef.current.requestAccessToken({ prompt: '' });
+      }
     } else {
-      alert('Google SDK script is loading. Please try again.');
+      alert('Google SDK is taking longer to load. Please check your network connection and try again.');
     }
   };
 
