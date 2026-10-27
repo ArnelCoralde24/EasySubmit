@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Sliders, ShieldCheck, Zap, FileText, Lock } from 'lucide-react';
+import { X, Sliders, ShieldCheck, Zap, FileText } from 'lucide-react';
 
 export default function SettingsModal({
   isOpen,

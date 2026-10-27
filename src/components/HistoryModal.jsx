@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Clock, Trash2, ExternalLink, CheckCircle2, AlertCircle } from 'lucide-react';
+import { X, Clock, Trash2, ExternalLink, AlertCircle } from 'lucide-react';
 
 export default function HistoryModal({
   isOpen,
