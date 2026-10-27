@@ -136,9 +136,11 @@ export default function App() {
 
   const saveHistoryItem = (newItem) => {
     if (!user?.email) return;
-    const updated = [newItem, ...historyList];
-    setHistoryList(updated);
-    localStorage.setItem(`easysubmit_history_${user.email.toLowerCase()}`, JSON.stringify(updated));
+    setHistoryList((prev) => {
+      const updated = [newItem, ...prev];
+      localStorage.setItem(`easysubmit_history_${user.email.toLowerCase()}`, JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const handleClearHistory = () => {
@@ -149,9 +151,11 @@ export default function App() {
 
   const handleDeleteHistoryItem = (indexToDelete) => {
     if (!user?.email) return;
-    const updated = historyList.filter((_, idx) => idx !== indexToDelete);
-    setHistoryList(updated);
-    localStorage.setItem(`easysubmit_history_${user.email.toLowerCase()}`, JSON.stringify(updated));
+    setHistoryList((prev) => {
+      const updated = prev.filter((_, idx) => idx !== indexToDelete);
+      localStorage.setItem(`easysubmit_history_${user.email.toLowerCase()}`, JSON.stringify(updated));
+      return updated;
+    });
   };
 
   useEffect(() => {
