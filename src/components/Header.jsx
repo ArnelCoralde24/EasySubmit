@@ -1,70 +1,65 @@
 import React from 'react';
-import { Sun, Moon, HelpCircle, LogOut } from 'lucide-react';
+import { Home, Clock, BookOpen, Sliders, ShieldCheck, User } from 'lucide-react';
 
-export default function Header({ darkMode, setDarkMode, user, onSignIn, onSignOut, onOpenHelp }) {
+export default function Header({
+  accessToken,
+  user,
+  onConnectDrive,
+  onSignOut,
+  onOpenHistory,
+  onOpenHelp,
+  onOpenSettings
+}) {
   return (
-    <header className="sticky top-0 z-40 w-full backdrop-blur-md bg-white/70 dark:bg-[#070a12]/80 border-b border-slate-200 dark:border-white/10 transition-colors duration-200">
-      <div className="max-w-xl mx-auto px-3 sm:px-4 py-3 flex items-center justify-between gap-2">
-        
-        {/* Logo */}
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-extrabold text-sm shadow-md shadow-blue-500/30 flex-shrink-0">
-            ES
-          </div>
-          <div className="flex items-center gap-1.5 min-w-0">
-            <span className="font-extrabold text-base tracking-tight text-slate-900 dark:text-white truncate">
-              EasySubmit
-            </span>
-            <span className="hidden xs:inline-block px-1.5 py-0.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold text-[10px] rounded-md border border-blue-500/20">
-              DRIVE
-            </span>
-          </div>
+    <header className="sticky top-0 z-40 w-full backdrop-blur-xl bg-slate-950/60 border-b border-white/10 px-4 sm:px-8 py-3.5 flex items-center justify-between select-none">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center font-black text-lg text-white shadow-[0_0_20px_rgba(37,99,235,0.5)]">
+          ES
         </div>
+        <span className="font-black text-xl tracking-tight text-white flex items-center gap-2">
+          EasySubmit
+          <ShieldCheck className="w-4 h-4 text-emerald-400" title="Protected by Maximum Security Protocol" />
+        </span>
+      </div>
 
-        {/* Actions */}
-        <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
-          <button
-            onClick={() => setDarkMode(!darkMode)}
-            className="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-slate-800 rounded-xl transition"
-            title="Toggle theme"
-          >
-            {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-700" />}
-          </button>
+      <nav className="hidden md:flex items-center gap-1 bg-white/5 border border-white/10 p-1 rounded-2xl backdrop-blur-md">
+        <button type="button" className="px-4 py-1.5 rounded-xl bg-blue-600 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-blue-600/30">
+          <Home className="w-4 h-4" />
+          <span>Home</span>
+        </button>
+        <button type="button" onClick={onOpenHistory} className="px-4 py-1.5 rounded-xl text-slate-300 hover:text-white font-semibold text-xs flex items-center gap-2 hover:bg-white/5 transition">
+          <Clock className="w-4 h-4 text-cyan-400" />
+          <span>History</span>
+        </button>
+        <button type="button" onClick={onOpenHelp} className="px-4 py-1.5 rounded-xl text-slate-300 hover:text-white font-semibold text-xs flex items-center gap-2 hover:bg-white/5 transition">
+          <BookOpen className="w-4 h-4" />
+          <span>How It Works</span>
+        </button>
+        <button type="button" onClick={onOpenSettings} className="px-3 py-1.5 rounded-xl text-slate-300 hover:text-white font-semibold text-xs flex items-center gap-1.5 hover:bg-white/5 transition">
+          <Sliders className="w-4 h-4 text-cyan-400" />
+          <span>Settings</span>
+        </button>
+      </nav>
 
-          <button
-            onClick={onOpenHelp}
-            className="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-slate-800 rounded-xl transition"
-            title="How it works"
-          >
-            <HelpCircle className="w-4 h-4" />
-          </button>
-
-          {user ? (
-            <div className="flex items-center gap-1.5">
-              <span className="hidden sm:inline-block text-xs font-semibold text-slate-700 dark:text-slate-200 truncate max-w-[100px]">
-                {user.name || 'User'}
-              </span>
-              <button
-                onClick={onSignOut}
-                className="p-2 text-red-500 hover:bg-red-500/10 rounded-xl transition"
-                title="Sign out"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
+      <div className="flex items-center gap-3">
+        {accessToken ? (
+          <div className="flex items-center gap-2.5 bg-blue-950/60 border border-blue-500/30 px-3 py-1.5 rounded-2xl">
+            <div className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold text-xs">
+              {user?.name?.[0] || 'U'}
             </div>
-          ) : (
-            <button
-              onClick={onSignIn}
-              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-md shadow-blue-600/20 transition active:scale-95 flex items-center gap-1.5"
-            >
-              <span className="w-4 h-4 rounded-full bg-white text-blue-600 font-black text-[10px] flex items-center justify-center">
-                G
-              </span>
-              <span>Connect Drive</span>
-            </button>
-          )}
-        </div>
-
+            <span className="text-xs font-semibold truncate max-w-[100px] sm:max-w-none">{user?.name || 'Connected'}</span>
+            <button type="button" onClick={onSignOut} className="text-[10px] text-red-400 hover:underline font-bold ml-1">Sign Out</button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={onConnectDrive}
+            className="px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-bold rounded-2xl text-xs flex items-center gap-2 shadow-lg shadow-blue-600/30 active:scale-95 transition-all"
+          >
+            <User className="w-4 h-4" />
+            <span>Connect Drive</span>
+          </button>
+        )}
       </div>
     </header>
   );
