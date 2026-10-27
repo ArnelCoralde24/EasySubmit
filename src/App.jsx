@@ -24,6 +24,7 @@ import {
 
 const GOOGLE_CLIENT_ID = "431007270977-j9h45it3o6fclmko97tttuioovqgb9m0.apps.googleusercontent.com";
 const ALLOWED_EXTENSIONS = ['pdf', 'docx', 'doc', 'pptx', 'ppt', 'xlsx', 'xls', 'txt', 'png', 'jpg', 'jpeg', 'zip', 'rar'];
+const DANGEROUS_EXTENSIONS = ['exe', 'bat', 'cmd', 'sh', 'vbs', 'js', 'jsx', 'ts', 'tsx', 'py', 'php', 'jar', 'apk', 'iso', 'scr'];
 
 export default function App() {
   const fileInputRef = useRef(null);
@@ -244,8 +245,15 @@ export default function App() {
     if (!accessToken || !targetFolderId) return;
 
     for (const file of filesToAdd) {
-      const ext = file.name.split('.').pop().toLowerCase();
-      if (!ALLOWED_EXTENSIONS.includes(ext)) {
+      const parts = file.name.split('.');
+      const ext = parts.pop().toLowerCase();
+      
+      if (parts.length > 1 && DANGEROUS_EXTENSIONS.includes(parts.pop().toLowerCase())) {
+        alert(`Security Alert: Double extension detected on "${file.name}". Rejected.`);
+        return;
+      }
+
+      if (!ALLOWED_EXTENSIONS.includes(ext) || DANGEROUS_EXTENSIONS.includes(ext)) {
         alert(`Security Alert: Ang file extension na ".${ext}" ay nakaharang dahil sa virus risk.`);
         return;
       }
@@ -290,8 +298,15 @@ export default function App() {
       const safeFiles = [];
 
       for (const file of selectedFiles) {
-        const ext = file.name.split('.').pop().toLowerCase();
-        if (!ALLOWED_EXTENSIONS.includes(ext)) {
+        const parts = file.name.split('.');
+        const ext = parts.pop().toLowerCase();
+
+        if (parts.length > 1 && DANGEROUS_EXTENSIONS.includes(parts.pop().toLowerCase())) {
+          alert(`Security Risk: Double extension detected on "${file.name}".`);
+          continue;
+        }
+
+        if (!ALLOWED_EXTENSIONS.includes(ext) || DANGEROUS_EXTENSIONS.includes(ext)) {
           alert(`Security Warning: Hindi pinapayagan ang ".${ext}" file type.`);
           continue;
         }
@@ -824,6 +839,10 @@ export default function App() {
         onClose={() => setIsSettingsOpen(false)}
         settings={settings}
         onToggleSetting={(key) => setSettings((prev) => ({ ...prev, [key]: !prev[key] }))}
+        historyList={historyList}
+        onClearHistory={handleClearHistory}
+        onDeleteHistoryItem={handleDeleteHistoryItem}
+        currentUserEmail={user?.email}
       />
       <HistoryModal
         isOpen={isHistoryOpen}
