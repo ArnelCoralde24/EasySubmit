@@ -16,17 +16,19 @@ export default function SettingsModal({
 
   if (!isOpen) return null;
 
+  const isUserLoggedIn = Boolean(currentUserEmail);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-2xl animate-fade-in select-none">
-      <div className="w-full max-w-xl bg-gradient-to-b from-slate-900/95 via-slate-900/90 to-slate-950/95 border border-white/15 rounded-3xl p-5 sm:p-6 space-y-5 shadow-[0_0_60px_rgba(37,99,235,0.3)] relative overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-2xl animate-fade-in select-none">
+      <div className="w-full max-w-xl bg-gradient-to-b from-slate-900/95 via-slate-900/90 to-slate-950/95 border border-white/15 rounded-3xl p-4 sm:p-6 space-y-4 sm:space-y-5 shadow-[0_0_60px_rgba(37,99,235,0.3)] relative overflow-hidden max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between pb-3 border-b border-white/10">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-2xl bg-blue-600/20 text-cyan-400 border border-blue-500/30 flex items-center justify-center shadow-lg shadow-cyan-500/20">
               <Sliders className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-white tracking-wide">Control Center</h2>
-              <p className="text-[11px] text-slate-400">Settings & Controls</p>
+              <h2 className="text-sm sm:text-base font-bold text-white tracking-wide">Control Center</h2>
+              <p className="text-[10px] sm:text-[11px] text-slate-400">Settings & Controls</p>
             </div>
           </div>
           <button
@@ -66,21 +68,21 @@ export default function SettingsModal({
         </div>
 
         {(activeTab === 'settings' || window.innerWidth >= 768) && (
-          <div className="space-y-3.5 text-xs max-h-[60vh] overflow-y-auto pr-1">
-            <div className="flex items-center justify-between p-4 bg-slate-950/60 border border-white/10 rounded-2xl hover:border-cyan-500/30 transition">
+          <div className="space-y-3 text-xs overflow-y-auto pr-1 flex-1">
+            <div className="flex items-center justify-between p-3.5 sm:p-4 bg-slate-950/60 border border-white/10 rounded-2xl hover:border-cyan-500/30 transition">
               <div className="space-y-0.5 pr-4">
                 <div className="flex items-center gap-2 font-bold text-slate-200">
                   <FileText className="w-4 h-4 text-cyan-400" />
                   <span>Auto-Format Filenames</span>
                 </div>
-                <p className="text-[11px] text-slate-400">
+                <p className="text-[10px] sm:text-[11px] text-slate-400">
                   Renames file to <code className="text-cyan-300">[Section] Student - Title</code>
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => onToggleSetting('autoFormatFilename')}
-                className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors duration-300 cursor-pointer ${
+                className={`w-11 sm:w-12 h-6 flex items-center rounded-full p-1 transition-colors duration-300 cursor-pointer flex-shrink-0 ${
                   settings?.autoFormatFilename ? 'bg-cyan-500 justify-end shadow-[0_0_15px_rgba(34,211,238,0.5)]' : 'bg-slate-700 justify-start'
                 }`}
               >
@@ -88,20 +90,20 @@ export default function SettingsModal({
               </button>
             </div>
 
-            <div className="flex items-center justify-between p-4 bg-slate-950/60 border border-white/10 rounded-2xl hover:border-cyan-500/30 transition">
+            <div className="flex items-center justify-between p-3.5 sm:p-4 bg-slate-950/60 border border-white/10 rounded-2xl hover:border-cyan-500/30 transition">
               <div className="space-y-0.5 pr-4">
                 <div className="flex items-center gap-2 font-bold text-slate-200">
                   <Zap className="w-4 h-4 text-blue-400" />
                   <span>Client Compression</span>
                 </div>
-                <p className="text-[11px] text-slate-400">
+                <p className="text-[10px] sm:text-[11px] text-slate-400">
                   Optimizes file size locally before uploading to Google Drive.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => onToggleSetting('clientCompression')}
-                className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors duration-300 cursor-pointer ${
+                className={`w-11 sm:w-12 h-6 flex items-center rounded-full p-1 transition-colors duration-300 cursor-pointer flex-shrink-0 ${
                   settings?.clientCompression ? 'bg-cyan-500 justify-end shadow-[0_0_15px_rgba(34,211,238,0.5)]' : 'bg-slate-700 justify-start'
                 }`}
               >
@@ -109,20 +111,20 @@ export default function SettingsModal({
               </button>
             </div>
 
-            <div className="flex items-center justify-between p-4 bg-slate-950/60 border border-white/10 rounded-2xl hover:border-cyan-500/30 transition">
+            <div className="flex items-center justify-between p-3.5 sm:p-4 bg-slate-950/60 border border-white/10 rounded-2xl hover:border-cyan-500/30 transition">
               <div className="space-y-0.5 pr-4">
                 <div className="flex items-center gap-2 font-bold text-slate-200">
                   <ShieldCheck className="w-4 h-4 text-emerald-400" />
                   <span>Anti-Spam Rate Limit</span>
                 </div>
-                <p className="text-[11px] text-slate-400">
+                <p className="text-[10px] sm:text-[11px] text-slate-400">
                   Prevents multiple spam uploads and limits max file size to 50MB.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => onToggleSetting('rateLimiting')}
-                className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors duration-300 cursor-pointer ${
+                className={`w-11 sm:w-12 h-6 flex items-center rounded-full p-1 transition-colors duration-300 cursor-pointer flex-shrink-0 ${
                   settings?.rateLimiting ? 'bg-cyan-500 justify-end shadow-[0_0_15px_rgba(34,211,238,0.5)]' : 'bg-slate-700 justify-start'
                 }`}
               >
@@ -130,20 +132,20 @@ export default function SettingsModal({
               </button>
             </div>
 
-            <div className="flex items-center justify-between p-4 bg-slate-950/60 border border-white/10 rounded-2xl hover:border-cyan-500/30 transition">
+            <div className="flex items-center justify-between p-3.5 sm:p-4 bg-slate-950/60 border border-white/10 rounded-2xl hover:border-cyan-500/30 transition">
               <div className="space-y-0.5 pr-4">
                 <div className="flex items-center gap-2 font-bold text-slate-200">
                   <Archive className="w-4 h-4 text-amber-400" />
                   <span>Zip Auto-Extractor</span>
                 </div>
-                <p className="text-[11px] text-slate-400">
+                <p className="text-[10px] sm:text-[11px] text-slate-400">
                   Automatically extracts uploaded .zip archives into individual files.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => onToggleSetting('autoExtractZip')}
-                className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors duration-300 cursor-pointer ${
+                className={`w-11 sm:w-12 h-6 flex items-center rounded-full p-1 transition-colors duration-300 cursor-pointer flex-shrink-0 ${
                   settings?.autoExtractZip ? 'bg-cyan-500 justify-end shadow-[0_0_15px_rgba(34,211,238,0.5)]' : 'bg-slate-700 justify-start'
                 }`}
               >
@@ -151,31 +153,40 @@ export default function SettingsModal({
               </button>
             </div>
 
-            <div className="p-4 bg-slate-950/60 border border-white/10 rounded-2xl space-y-3 hover:border-cyan-500/30 transition">
+            <div className={`p-3.5 sm:p-4 bg-slate-950/60 border rounded-2xl space-y-3 transition ${
+              isUserLoggedIn ? 'border-white/10 hover:border-cyan-500/30' : 'border-white/5 opacity-60'
+            }`}>
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5 pr-4">
                   <div className="flex items-center gap-2 font-bold text-slate-200">
-                    <Lock className="w-4 h-4 text-purple-400" />
+                    <Lock className={`w-4 h-4 ${isUserLoggedIn ? 'text-purple-400' : 'text-slate-500'}`} />
                     <span>Inactivity Auto-Lock</span>
                   </div>
-                  <p className="text-[11px] text-slate-400">
-                    Automatically signs out after a period of user inactivity.
+                  <p className="text-[10px] sm:text-[11px] text-slate-400">
+                    {isUserLoggedIn
+                      ? 'Automatically signs out after a period of user inactivity.'
+                      : 'Connect Google Drive account first to enable auto-lock.'}
                   </p>
                 </div>
                 <button
                   type="button"
-                  onClick={() => onToggleSetting('autoLockEnabled')}
-                  className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors duration-300 cursor-pointer ${
-                    settings?.autoLockEnabled ? 'bg-cyan-500 justify-end shadow-[0_0_15px_rgba(34,211,238,0.5)]' : 'bg-slate-700 justify-start'
+                  disabled={!isUserLoggedIn}
+                  onClick={() => isUserLoggedIn && onToggleSetting('autoLockEnabled')}
+                  className={`w-11 sm:w-12 h-6 flex items-center rounded-full p-1 transition-colors duration-300 flex-shrink-0 ${
+                    !isUserLoggedIn
+                      ? 'bg-slate-800 cursor-not-allowed'
+                      : settings?.autoLockEnabled
+                      ? 'bg-cyan-500 justify-end shadow-[0_0_15px_rgba(34,211,238,0.5)] cursor-pointer'
+                      : 'bg-slate-700 justify-start cursor-pointer'
                   }`}
                 >
                   <div className="w-4 h-4 rounded-full bg-white shadow-md" />
                 </button>
               </div>
 
-              {settings?.autoLockEnabled && (
+              {isUserLoggedIn && settings?.autoLockEnabled && (
                 <div className="flex items-center justify-between pt-2 border-t border-white/5">
-                  <span className="text-[11px] font-semibold text-slate-300">Set Inactivity Timeout:</span>
+                  <span className="text-[10px] sm:text-[11px] font-semibold text-slate-300">Set Inactivity Timeout:</span>
                   <select
                     value={settings?.autoLockMinutes || 15}
                     onChange={(e) => onUpdateSetting('autoLockMinutes', Number(e.target.value))}
@@ -193,16 +204,16 @@ export default function SettingsModal({
         )}
 
         {activeTab === 'history' && (
-          <div className="block md:hidden space-y-3">
+          <div className="block md:hidden space-y-3 flex-1 overflow-y-auto pr-1">
             <div className="flex justify-between items-center text-xs">
-              <span className="text-[11px] text-slate-400">
+              <span className="text-[11px] text-slate-400 truncate">
                 {currentUserEmail ? `Account: ${currentUserEmail}` : 'Not connected'}
               </span>
               {historyList.length > 0 && (
                 <button
                   type="button"
                   onClick={onClearHistory}
-                  className="text-[11px] text-red-400 hover:underline font-semibold"
+                  className="text-[11px] text-red-400 hover:underline font-semibold flex-shrink-0 ml-2"
                 >
                   Clear All
                 </button>
@@ -221,7 +232,7 @@ export default function SettingsModal({
                 <p className="text-xs font-semibold text-slate-400">No submission history found</p>
               </div>
             ) : (
-              <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+              <div className="space-y-2.5">
                 {historyList.map((item, index) => (
                   <div
                     key={item.receiptId || index}
