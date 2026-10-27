@@ -532,7 +532,6 @@ export default function App() {
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
               <span>Protected Portal</span>
             </p>
-            <p className="text-slate-300 text-[11px]">Maximum Anti-Virus & Code Protection Active.</p>
           </div>
         </aside>
 
