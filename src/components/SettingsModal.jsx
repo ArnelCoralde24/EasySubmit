@@ -32,6 +32,7 @@ export default function SettingsModal({
         </div>
 
         <div className="space-y-4 text-xs">
+          {/* Option 1: Auto Format */}
           <div className="flex items-center justify-between p-4 bg-slate-950/60 border border-white/5 rounded-2xl">
             <div className="space-y-0.5 pr-4">
               <div className="flex items-center gap-2 font-bold text-slate-200">
@@ -39,24 +40,21 @@ export default function SettingsModal({
                 <span>Auto-Format Filenames</span>
               </div>
               <p className="text-[11px] text-slate-400">
-                Standardizes file names to <code>[Section] Student - Activity</code> format for teachers.
+                Standardizes file names to <code className="text-cyan-300">[Section] Student - Activity</code> format for teachers.
               </p>
             </div>
             <button
               type="button"
               onClick={() => onToggleSetting('autoFormatFilename')}
-              className={`w-12 h-6 rounded-full p-1 transition-colors duration-200 ease-in-out ${
-                settings.autoFormatFilename ? 'bg-cyan-500' : 'bg-slate-800'
+              className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors duration-300 ease-in-out cursor-pointer ${
+                settings?.autoFormatFilename ? 'bg-cyan-500 justify-end' : 'bg-slate-700 justify-start'
               }`}
             >
-              <div
-                className={`w-4 h-4 rounded-full bg-white transition-transform duration-200 ease-in-out ${
-                  settings.autoFormatFilename ? 'translate-x-6' : 'translate-x-0'
-                }`}
-              />
+              <div className="w-4 h-4 rounded-full bg-white shadow-md transition-all duration-300" />
             </button>
           </div>
 
+          {/* Option 2: Compression */}
           <div className="flex items-center justify-between p-4 bg-slate-950/60 border border-white/5 rounded-2xl">
             <div className="space-y-0.5 pr-4">
               <div className="flex items-center gap-2 font-bold text-slate-200">
@@ -70,18 +68,15 @@ export default function SettingsModal({
             <button
               type="button"
               onClick={() => onToggleSetting('clientCompression')}
-              className={`w-12 h-6 rounded-full p-1 transition-colors duration-200 ease-in-out ${
-                settings.clientCompression ? 'bg-cyan-500' : 'bg-slate-800'
+              className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors duration-300 ease-in-out cursor-pointer ${
+                settings?.clientCompression ? 'bg-cyan-500 justify-end' : 'bg-slate-700 justify-start'
               }`}
             >
-              <div
-                className={`w-4 h-4 rounded-full bg-white transition-transform duration-200 ease-in-out ${
-                  settings.clientCompression ? 'translate-x-6' : 'translate-x-0'
-                }`}
-              />
+              <div className="w-4 h-4 rounded-full bg-white shadow-md transition-all duration-300" />
             </button>
           </div>
 
+          {/* Option 3: Rate Limiting */}
           <div className="flex items-center justify-between p-4 bg-slate-950/60 border border-white/5 rounded-2xl">
             <div className="space-y-0.5 pr-4">
               <div className="flex items-center gap-2 font-bold text-slate-200">
@@ -95,15 +90,11 @@ export default function SettingsModal({
             <button
               type="button"
               onClick={() => onToggleSetting('rateLimiting')}
-              className={`w-12 h-6 rounded-full p-1 transition-colors duration-200 ease-in-out ${
-                settings.rateLimiting ? 'bg-cyan-500' : 'bg-slate-800'
+              className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors duration-300 ease-in-out cursor-pointer ${
+                settings?.rateLimiting ? 'bg-cyan-500 justify-end' : 'bg-slate-700 justify-start'
               }`}
             >
-              <div
-                className={`w-4 h-4 rounded-full bg-white transition-transform duration-200 ease-in-out ${
-                  settings.rateLimiting ? 'translate-x-6' : 'translate-x-0'
-                }`}
-              />
+              <div className="w-4 h-4 rounded-full bg-white shadow-md transition-all duration-300" />
             </button>
           </div>
         </div>
