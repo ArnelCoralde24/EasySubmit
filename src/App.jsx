@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { 
-  Folder, UploadCloud, Send, Link2, Clipboard, X,
-  BookOpen, FileCheck, Package, ExternalLink, ShieldAlert,
-  FileText, Trash2, Edit3, Users, RefreshCw, MinusCircle, Home,
-  FolderOpen, HardDrive, User, Lock, ShieldCheck, Sliders, Clock
+  BookOpen, FileCheck, Package, UploadCloud, Send, Link2, Clipboard, X,
+  FileText, Trash2, Users, RefreshCw, MinusCircle, Home,
+  FolderOpen, ShieldCheck, Sliders, Clock
 } from "lucide-react";
 import Header from "./components/Header";
 import FolderExplorer from "./components/FolderExplorer";
