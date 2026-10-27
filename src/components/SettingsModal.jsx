@@ -37,7 +37,7 @@ export default function SettingsModal({
           </button>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 p-1 bg-slate-950/80 border border-white/10 rounded-2xl">
+        <div className="flex md:hidden grid grid-cols-2 gap-2 p-1 bg-slate-950/80 border border-white/10 rounded-2xl">
           <button
             type="button"
             onClick={() => setActiveTab('settings')}
@@ -64,7 +64,7 @@ export default function SettingsModal({
           </button>
         </div>
 
-        {activeTab === 'settings' && (
+        {(activeTab === 'settings' || window.innerWidth >= 768) && (
           <div className="space-y-3.5 text-xs">
             <div className="flex items-center justify-between p-4 bg-slate-950/60 border border-white/10 rounded-2xl hover:border-cyan-500/30 transition">
               <div className="space-y-0.5 pr-4">
@@ -132,7 +132,7 @@ export default function SettingsModal({
         )}
 
         {activeTab === 'history' && (
-          <div className="space-y-3">
+          <div className="block md:hidden space-y-3">
             <div className="flex justify-between items-center text-xs">
               <span className="text-[11px] text-slate-400">
                 {currentUserEmail ? `Account: ${currentUserEmail}` : 'Not connected'}

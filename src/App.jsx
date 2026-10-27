@@ -287,7 +287,7 @@ export default function App() {
       await loadFolderItems(targetFolderId);
     } catch (err) {
       setUploadError(err.message || 'Error uploading file');
-    } finally {
+    } fontally {
       setIsUploading(false);
     }
   };
@@ -487,7 +487,7 @@ export default function App() {
         onConnectDrive={handleConnectDrive}
         onSignOut={handleSignOut}
         onOpenHistory={() => setIsHistoryOpen(true)}
-        onOpenHelp={() => setIsHelpOpen(true)}
+        onOpenHelp={() => setIsHelpOpen(false)}
         onOpenSettings={() => setIsSettingsOpen(true)}
       />
 

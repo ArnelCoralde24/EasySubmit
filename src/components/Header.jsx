@@ -26,11 +26,10 @@ export default function Header({
         <button
           type="button"
           onClick={onOpenSettings}
-          className="relative p-2.5 rounded-2xl bg-gradient-to-br from-blue-600/30 via-purple-600/30 to-cyan-500/20 border border-cyan-400/40 text-cyan-300 shadow-[0_0_25px_rgba(34,211,238,0.4)] active:scale-90 transition-all duration-200"
+          className="p-2 rounded-xl bg-slate-900/80 border border-white/10 text-slate-300 hover:text-white backdrop-blur-md active:scale-95 transition"
           title="Open Settings & History"
         >
-          <Settings className="w-5 h-5 animate-spin-slow" />
-          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-cyan-400 rounded-full animate-ping" />
+          <Settings className="w-4 h-4" />
         </button>
       </div>
 
