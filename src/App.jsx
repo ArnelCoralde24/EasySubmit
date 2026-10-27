@@ -503,7 +503,7 @@ export default function App() {
             <span>Home</span>
           </button>
           <button type="button" onClick={() => setIsHistoryOpen(true)} className="px-4 py-1.5 rounded-xl text-slate-300 hover:text-white font-semibold text-xs flex items-center gap-2 hover:bg-white/5 transition">
-            <Clock className="w-4 h-4" />
+            <Clock className="w-4 h-4 text-cyan-400" />
             <span>History</span>
           </button>
           <button type="button" onClick={() => setIsHelpOpen(true)} className="px-4 py-1.5 rounded-xl text-slate-300 hover:text-white font-semibold text-xs flex items-center gap-2 hover:bg-white/5 transition">
@@ -546,7 +546,7 @@ export default function App() {
               <span>Home</span>
             </button>
             <button type="button" onClick={() => setIsHistoryOpen(true)} className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 font-semibold rounded-2xl text-xs transition">
-              <Clock className="w-4 h-4" />
+              <Clock className="w-4 h-4 text-cyan-400" />
               <span>Submission History</span>
             </button>
             <button type="button" onClick={() => setIsSettingsOpen(true)} className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 font-semibold rounded-2xl text-xs transition">
