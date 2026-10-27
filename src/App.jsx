@@ -5,6 +5,7 @@ import {
   FileText, Trash2, Edit3, Users, RefreshCw, MinusCircle, Home,
   FolderOpen, HardDrive, User, Lock, ShieldCheck, Sliders, Clock
 } from "lucide-react";
+import Header from "./components/Header";
 import FolderExplorer from "./components/FolderExplorer";
 import UploadProgressModal from './components/UploadProgressModal';
 import SubmissionReceiptModal from './components/SubmissionReceiptModal';
@@ -82,8 +83,8 @@ export default function App() {
   const [receiptData, setReceiptData] = useState(null);
 
   useEffect(() => {
-  document.documentElement.classList.add('dark');
-}, []);
+    document.documentElement.classList.add('dark');
+  }, []);
 
   useEffect(() => {
     if (isHelpOpen || receiptData || isUploading || isSettingsOpen || isHistoryOpen) {
@@ -466,57 +467,15 @@ export default function App() {
       <div className="fixed top-1/2 right-0 w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-[140px] pointer-events-none" />
       <div className="fixed -bottom-40 left-1/3 w-96 h-96 bg-cyan-500/20 rounded-full blur-[130px] pointer-events-none" />
 
-      <header className="sticky top-0 z-40 w-full backdrop-blur-xl bg-slate-950/60 border-b border-white/10 px-4 sm:px-8 py-3.5 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center font-black text-lg text-white shadow-[0_0_20px_rgba(37,99,235,0.5)]">
-            ES
-          </div>
-          <span className="font-black text-xl tracking-tight text-white flex items-center gap-2">
-            EasySubmit
-            <ShieldCheck className="w-4 h-4 text-emerald-400" title="Protected by Maximum Security Protocol" />
-          </span>
-        </div>
-
-        <nav className="hidden md:flex items-center gap-1 bg-white/5 border border-white/10 p-1 rounded-2xl backdrop-blur-md">
-          <button type="button" className="px-4 py-1.5 rounded-xl bg-blue-600 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-blue-600/30">
-            <Home className="w-4 h-4" />
-            <span>Home</span>
-          </button>
-          <button type="button" onClick={() => setIsHistoryOpen(true)} className="px-4 py-1.5 rounded-xl text-slate-300 hover:text-white font-semibold text-xs flex items-center gap-2 hover:bg-white/5 transition">
-            <Clock className="w-4 h-4 text-cyan-400" />
-            <span>History</span>
-          </button>
-          <button type="button" onClick={() => setIsHelpOpen(true)} className="px-4 py-1.5 rounded-xl text-slate-300 hover:text-white font-semibold text-xs flex items-center gap-2 hover:bg-white/5 transition">
-            <BookOpen className="w-4 h-4" />
-            <span>How It Works</span>
-          </button>
-          <button type="button" onClick={() => setIsSettingsOpen(true)} className="px-3 py-1.5 rounded-xl text-slate-300 hover:text-white font-semibold text-xs flex items-center gap-1.5 hover:bg-white/5 transition">
-            <Sliders className="w-4 h-4 text-cyan-400" />
-            <span>Settings</span>
-          </button>
-        </nav>
-
-        <div className="flex items-center gap-3">
-          {accessToken ? (
-            <div className="flex items-center gap-2.5 bg-blue-950/60 border border-blue-500/30 px-3 py-1.5 rounded-2xl">
-              <div className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold text-xs">
-                {user?.name?.[0] || 'U'}
-              </div>
-              <span className="text-xs font-semibold truncate max-w-[100px] sm:max-w-none">{user?.name || 'Connected'}</span>
-              <button type="button" onClick={handleSignOut} className="text-[10px] text-red-400 hover:underline font-bold ml-1">Sign Out</button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={handleConnectDrive}
-              className="px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-bold rounded-2xl text-xs flex items-center gap-2 shadow-lg shadow-blue-600/30 active:scale-95 transition-all"
-            >
-              <User className="w-4 h-4" />
-              <span>Connect Drive</span>
-            </button>
-          )}
-        </div>
-      </header>
+      <Header
+        accessToken={accessToken}
+        user={user}
+        onConnectDrive={handleConnectDrive}
+        onSignOut={handleSignOut}
+        onOpenHistory={() => setIsHistoryOpen(true)}
+        onOpenHelp={() => setIsHelpOpen(true)}
+        onOpenSettings={() => setIsSettingsOpen(true)}
+      />
 
       <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6 relative z-10">
         <aside className="hidden lg:flex lg:col-span-3 flex-col justify-between bg-white/5 border border-white/10 rounded-3xl p-5 backdrop-blur-2xl">
