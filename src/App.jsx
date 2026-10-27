@@ -32,12 +32,12 @@ export default function App() {
   const tokenClientRef = useRef(null);
 
   const [user, setUser] = useState(() => {
-    const savedUser = sessionStorage.getItem('easysubmit_user');
+    const savedUser = localStorage.getItem('easysubmit_user');
     return savedUser ? JSON.parse(savedUser) : null;
   });
 
   const [accessToken, setAccessToken] = useState(() => {
-    return sessionStorage.getItem('easysubmit_token') || null;
+    return localStorage.getItem('easysubmit_token') || null;
   });
 
   const [myCreatedIds, setMyCreatedIds] = useState(() => {
@@ -154,7 +154,7 @@ export default function App() {
           }
           if (response.access_token) {
             setAccessToken(response.access_token);
-            sessionStorage.setItem('easysubmit_token', response.access_token);
+            localStorage.setItem('easysubmit_token', response.access_token);
 
             try {
               const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
@@ -162,11 +162,11 @@ export default function App() {
               });
               const userData = await res.json();
               setUser(userData);
-              sessionStorage.setItem('easysubmit_user', JSON.stringify(userData));
+              localStorage.setItem('easysubmit_user', JSON.stringify(userData));
             } catch (err) {
               const fallbackUser = { name: 'Connected User' };
               setUser(fallbackUser);
-              sessionStorage.setItem('easysubmit_user', JSON.stringify(fallbackUser));
+              localStorage.setItem('easysubmit_user', JSON.stringify(fallbackUser));
             }
           }
         },
@@ -187,6 +187,26 @@ export default function App() {
     }
   }, []);
 
+  useEffect(() => {
+    const checkTokenValidity = async () => {
+      if (accessToken) {
+        try {
+          const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+            headers: { Authorization: `Bearer ${accessToken}` }
+          });
+          if (!res.ok) {
+            if (tokenClientRef.current) {
+              tokenClientRef.current.requestAccessToken({ prompt: '' });
+            }
+          }
+        } catch (err) {
+          console.error("Token verification error", err);
+        }
+      }
+    };
+    checkTokenValidity();
+  }, [accessToken]);
+
   const handleConnectDrive = () => {
     if (tokenClientRef.current) {
       tokenClientRef.current.requestAccessToken({ prompt: '' });
@@ -206,8 +226,8 @@ export default function App() {
     setUser(null);
     setAccessToken(null);
     setHistoryList([]);
-    sessionStorage.removeItem('easysubmit_token');
-    sessionStorage.removeItem('easysubmit_user');
+    localStorage.removeItem('easysubmit_token');
+    localStorage.removeItem('easysubmit_user');
   };
 
   const loadFolderItems = async (targetId, silent = false) => {
