@@ -67,6 +67,7 @@ export default function App() {
   const [folderContents, setFolderContents] = useState([]);
   const [breadcrumbs, setBreadcrumbs] = useState([]);
   const [isLoadingContents, setIsLoadingContents] = useState(false);
+  const [isAccessClosed, setIsAccessClosed] = useState(false);
 
   const [fullName, setFullName] = useState(() => localStorage.getItem('easysubmit_draft_name') || '');
   const [section, setSection] = useState(() => localStorage.getItem('easysubmit_draft_section') || '');
@@ -254,8 +255,10 @@ export default function App() {
     try {
       const items = await fetchFolderContents(targetId, accessToken);
       setFolderContents(items || []);
+      setIsAccessClosed(false);
     } catch (err) {
       console.error(err);
+      setIsAccessClosed(true);
     } finally {
       if (!silent) setIsLoadingContents(false);
     }
@@ -361,6 +364,7 @@ export default function App() {
     setCurrentFolderId('');
     setFolderContents([]);
     setBreadcrumbs([]);
+    setIsAccessClosed(false);
   };
 
   const handleVerifyFolder = async (folderLinkOrId) => {
@@ -374,6 +378,7 @@ export default function App() {
     setActiveFolderId(id);
     setCurrentFolderId(id);
     setBreadcrumbs([{ id, name: 'Root Folder' }]);
+    setIsAccessClosed(false);
   };
 
   const categories = [
@@ -739,6 +744,7 @@ export default function App() {
                   isLoading={isLoadingContents}
                   myCreatedIds={myCreatedIds}
                   currentUserEmail={user?.email}
+                  isAccessClosed={isAccessClosed}
                 />
               </div>
             )}

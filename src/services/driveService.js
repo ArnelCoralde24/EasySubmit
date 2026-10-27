@@ -45,14 +45,7 @@ export const verifyFileMagicBytes = (file) => {
 
 export const sanitizeString = (str) => {
   if (!str) return '';
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;')
-    .replace(/\//g, '&#x2F;')
-    .trim();
+  return str.replace(/[\\/:*?"<>|]/g, '').trim();
 };
 
 export const extractFolderId = (urlOrId) => {
@@ -64,6 +57,9 @@ export const extractFolderId = (urlOrId) => {
 
   const matchUserFolders = trimmed.match(/\/drive\/(?:u\/\d+\/)?folders\/([a-zA-Z0-9_-]+)/);
   if (matchUserFolders && matchUserFolders[1]) return matchUserFolders[1];
+
+  const matchIdParam = trimmed.match(/id=([a-zA-Z0-9_-]+)/);
+  if (matchIdParam && matchIdParam[1]) return matchIdParam[1];
 
   if (/^[a-zA-Z0-9_-]{10,}$/.test(trimmed)) return trimmed;
 
@@ -87,7 +83,7 @@ export const fetchFolderContents = async (folderId, accessToken) => {
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.error?.message || 'Failed to fetch folder contents');
     }
 
@@ -103,7 +99,7 @@ export const createDriveFolder = async (folderName, parentFolderId, accessToken)
   const metadata = {
     name: sanitizeString(folderName),
     mimeType: 'application/vnd.google-apps.folder',
-    parents: [parentFolderId],
+    parents: parentFolderId ? [parentFolderId] : [],
   };
 
   const response = await fetch(`${DRIVE_API_BASE}/files?supportsAllDrives=true`, {
@@ -116,7 +112,7 @@ export const createDriveFolder = async (folderName, parentFolderId, accessToken)
   });
 
   if (!response.ok) {
-    const errorData = await response.json();
+    const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.error?.message || 'Failed to create subfolder');
   }
 
@@ -126,7 +122,7 @@ export const createDriveFolder = async (folderName, parentFolderId, accessToken)
 export const uploadFileToDrive = async (file, parentFolderId, accessToken, customName, onProgress) => {
   const metadata = {
     name: sanitizeString(customName || file.name),
-    parents: [parentFolderId],
+    parents: parentFolderId ? [parentFolderId] : [],
   };
 
   const formData = new FormData();
@@ -152,10 +148,19 @@ export const uploadFileToDrive = async (file, parentFolderId, accessToken, custo
 
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) {
-        const res = JSON.parse(xhr.responseText);
-        resolve(res);
+        try {
+          const res = JSON.parse(xhr.responseText);
+          resolve(res);
+        } catch (err) {
+          resolve({ name: customName || file.name });
+        }
       } else {
-        reject(new Error(`Upload failed with status ${xhr.status}`));
+        try {
+          const errRes = JSON.parse(xhr.responseText);
+          reject(new Error(errRes.error?.message || `Upload failed with status ${xhr.status}`));
+        } catch (err) {
+          reject(new Error(`Upload failed with status ${xhr.status}`));
+        }
       }
     };
 
@@ -175,7 +180,7 @@ export const deleteDriveItem = async (fileOrFolderId, accessToken) => {
   });
 
   if (!response.ok && response.status !== 204) {
-    const errorData = await response.json();
+    const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.error?.message || 'Failed to delete item from Google Drive');
   }
 
