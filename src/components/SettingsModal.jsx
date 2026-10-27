@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { X, Sliders, ShieldCheck, Zap, FileText, Clock, Trash2, ExternalLink, AlertCircle } from 'lucide-react';
+import { X, Sliders, ShieldCheck, Zap, FileText, Clock, Trash2, ExternalLink, AlertCircle, Archive, Lock } from 'lucide-react';
 
 export default function SettingsModal({
   isOpen,
   onClose,
   settings,
   onToggleSetting,
+  onUpdateSetting,
   historyList = [],
   onClearHistory,
   onDeleteHistoryItem,
@@ -25,7 +26,7 @@ export default function SettingsModal({
             </div>
             <div>
               <h2 className="text-base font-bold text-white tracking-wide">Control Center</h2>
-              <p className="text-[11px] text-slate-400">Settings & Submission Records</p>
+              <p className="text-[11px] text-slate-400">Settings & Controls</p>
             </div>
           </div>
           <button
@@ -65,7 +66,7 @@ export default function SettingsModal({
         </div>
 
         {(activeTab === 'settings' || window.innerWidth >= 768) && (
-          <div className="space-y-3.5 text-xs">
+          <div className="space-y-3.5 text-xs max-h-[60vh] overflow-y-auto pr-1">
             <div className="flex items-center justify-between p-4 bg-slate-950/60 border border-white/10 rounded-2xl hover:border-cyan-500/30 transition">
               <div className="space-y-0.5 pr-4">
                 <div className="flex items-center gap-2 font-bold text-slate-200">
@@ -127,6 +128,66 @@ export default function SettingsModal({
               >
                 <div className="w-4 h-4 rounded-full bg-white shadow-md" />
               </button>
+            </div>
+
+            <div className="flex items-center justify-between p-4 bg-slate-950/60 border border-white/10 rounded-2xl hover:border-cyan-500/30 transition">
+              <div className="space-y-0.5 pr-4">
+                <div className="flex items-center gap-2 font-bold text-slate-200">
+                  <Archive className="w-4 h-4 text-amber-400" />
+                  <span>Zip Auto-Extractor</span>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  Automatically extracts uploaded .zip archives into individual files.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => onToggleSetting('autoExtractZip')}
+                className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors duration-300 cursor-pointer ${
+                  settings?.autoExtractZip ? 'bg-cyan-500 justify-end shadow-[0_0_15px_rgba(34,211,238,0.5)]' : 'bg-slate-700 justify-start'
+                }`}
+              >
+                <div className="w-4 h-4 rounded-full bg-white shadow-md" />
+              </button>
+            </div>
+
+            <div className="p-4 bg-slate-950/60 border border-white/10 rounded-2xl space-y-3 hover:border-cyan-500/30 transition">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5 pr-4">
+                  <div className="flex items-center gap-2 font-bold text-slate-200">
+                    <Lock className="w-4 h-4 text-purple-400" />
+                    <span>Inactivity Auto-Lock</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400">
+                    Automatically signs out after a period of user inactivity.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onToggleSetting('autoLockEnabled')}
+                  className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors duration-300 cursor-pointer ${
+                    settings?.autoLockEnabled ? 'bg-cyan-500 justify-end shadow-[0_0_15px_rgba(34,211,238,0.5)]' : 'bg-slate-700 justify-start'
+                  }`}
+                >
+                  <div className="w-4 h-4 rounded-full bg-white shadow-md" />
+                </button>
+              </div>
+
+              {settings?.autoLockEnabled && (
+                <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                  <span className="text-[11px] font-semibold text-slate-300">Set Inactivity Timeout:</span>
+                  <select
+                    value={settings?.autoLockMinutes || 15}
+                    onChange={(e) => onUpdateSetting('autoLockMinutes', Number(e.target.value))}
+                    className="bg-slate-900 border border-white/10 text-cyan-300 text-xs font-bold rounded-xl px-2.5 py-1 outline-none focus:border-cyan-400"
+                  >
+                    <option value={5}>5 Minutes</option>
+                    <option value={15}>15 Minutes</option>
+                    <option value={30}>30 Minutes</option>
+                    <option value={60}>60 Minutes</option>
+                  </select>
+                </div>
+              )}
             </div>
           </div>
         )}

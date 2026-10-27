@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { 
   BookOpen, FileCheck, Package, UploadCloud, Send, Link2, Clipboard, X,
   FileText, Trash2, Users, RefreshCw, MinusCircle, Home,
-  FolderOpen, ShieldCheck, Sliders, Clock
+  FolderOpen, ShieldCheck, Sliders, Clock, Eye, Save
 } from "lucide-react";
 import Header from "./components/Header";
 import FolderExplorer from "./components/FolderExplorer";
@@ -12,6 +12,7 @@ import HelpModal from './components/HelpModal';
 import SettingsModal from './components/SettingsModal';
 import HistoryModal from './components/HistoryModal';
 import PrivacyModal from './components/PrivacyModal';
+import FilePreviewModal from './components/FilePreviewModal';
 import { 
   extractFolderId, 
   fetchFolderContents, 
@@ -30,6 +31,7 @@ const DANGEROUS_EXTENSIONS = ['exe', 'bat', 'cmd', 'sh', 'vbs', 'js', 'jsx', 'ts
 export default function App() {
   const fileInputRef = useRef(null);
   const tokenClientRef = useRef(null);
+  const inactivityTimerRef = useRef(null);
 
   const [user, setUser] = useState(() => {
     const savedUser = localStorage.getItem('easysubmit_user');
@@ -50,28 +52,32 @@ export default function App() {
     return saved ? JSON.parse(saved) : {
       autoFormatFilename: false,
       clientCompression: false,
-      rateLimiting: false
+      rateLimiting: false,
+      autoExtractZip: false,
+      autoLockEnabled: false,
+      autoLockMinutes: 15
     };
   });
 
   const [historyList, setHistoryList] = useState([]);
 
-  const [driveInput, setDriveInput] = useState('');
+  const [driveInput, setDriveInput] = useState(() => localStorage.getItem('easysubmit_draft_drive_input') || '');
   const [activeFolderId, setActiveFolderId] = useState('');
   const [currentFolderId, setCurrentFolderId] = useState('');
   const [folderContents, setFolderContents] = useState([]);
   const [breadcrumbs, setBreadcrumbs] = useState([]);
   const [isLoadingContents, setIsLoadingContents] = useState(false);
 
-  const [fullName, setFullName] = useState('');
-  const [section, setSection] = useState('');
-  const [subject, setSubject] = useState('');
+  const [fullName, setFullName] = useState(() => localStorage.getItem('easysubmit_draft_name') || '');
+  const [section, setSection] = useState(() => localStorage.getItem('easysubmit_draft_section') || '');
+  const [subject, setSubject] = useState(() => localStorage.getItem('easysubmit_draft_subject') || '');
   
   const [submissionType, setSubmissionType] = useState('Assignment');
   const [customSubmissionName, setCustomSubmissionName] = useState('');
 
   const [files, setFiles] = useState([]);
 
+  const [previewFile, setPreviewFile] = useState(null);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -89,7 +95,14 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (isHelpOpen || receiptData || isUploading || isSettingsOpen || isHistoryOpen || isPrivacyOpen) {
+    localStorage.setItem('easysubmit_draft_name', fullName);
+    localStorage.setItem('easysubmit_draft_section', section);
+    localStorage.setItem('easysubmit_draft_subject', subject);
+    localStorage.setItem('easysubmit_draft_drive_input', driveInput);
+  }, [fullName, section, subject, driveInput]);
+
+  useEffect(() => {
+    if (isHelpOpen || receiptData || isUploading || isSettingsOpen || isHistoryOpen || isPrivacyOpen || previewFile) {
       document.body.style.overflow = 'hidden';
       window.scrollTo({ top: 0, behavior: 'instant' });
     } else {
@@ -98,7 +111,7 @@ export default function App() {
     return () => {
       document.body.style.overflow = 'unset';
     };
-  }, [isHelpOpen, receiptData, isUploading, isSettingsOpen, isHistoryOpen, isPrivacyOpen]);
+  }, [isHelpOpen, receiptData, isUploading, isSettingsOpen, isHistoryOpen, isPrivacyOpen, previewFile]);
 
   useEffect(() => {
     localStorage.setItem('easysubmit_my_ids', JSON.stringify(myCreatedIds));
@@ -116,6 +129,31 @@ export default function App() {
       setHistoryList([]);
     }
   }, [user]);
+
+  useEffect(() => {
+    if (!accessToken || !settings.autoLockEnabled) {
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+      return;
+    }
+
+    const resetInactivityTimer = () => {
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+      const timeoutMs = (settings.autoLockMinutes || 15) * 60 * 1000;
+      inactivityTimerRef.current = setTimeout(() => {
+        handleSignOut();
+        alert(`Session Auto-Locked: Signed out after ${settings.autoLockMinutes || 15} minutes of inactivity.`);
+      }, timeoutMs);
+    };
+
+    const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
+    events.forEach((evt) => window.addEventListener(evt, resetInactivityTimer));
+    resetInactivityTimer();
+
+    return () => {
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+      events.forEach((evt) => window.removeEventListener(evt, resetInactivityTimer));
+    };
+  }, [accessToken, settings.autoLockEnabled, settings.autoLockMinutes]);
 
   const saveHistoryItem = (newItem) => {
     if (!user?.email) return;
@@ -186,26 +224,6 @@ export default function App() {
       return () => clearInterval(interval);
     }
   }, []);
-
-  useEffect(() => {
-    const checkTokenValidity = async () => {
-      if (accessToken) {
-        try {
-          const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-            headers: { Authorization: `Bearer ${accessToken}` }
-          });
-          if (!res.ok) {
-            if (tokenClientRef.current) {
-              tokenClientRef.current.requestAccessToken({ prompt: '' });
-            }
-          }
-        } catch (err) {
-          console.error("Token verification error", err);
-        }
-      }
-    };
-    checkTokenValidity();
-  }, [accessToken]);
 
   const handleConnectDrive = () => {
     if (tokenClientRef.current) {
@@ -280,57 +298,6 @@ export default function App() {
     }
   };
 
-  const handleAddFilesToFolder = async (filesToAdd, targetFolderId) => {
-    if (!accessToken || !targetFolderId) return;
-
-    for (const file of filesToAdd) {
-      const parts = file.name.split('.');
-      const ext = parts.pop().toLowerCase();
-      
-      if (parts.length > 1 && DANGEROUS_EXTENSIONS.includes(parts.pop().toLowerCase())) {
-        alert(`Security Alert: Double extension detected on "${file.name}". Rejected.`);
-        return;
-      }
-
-      if (!ALLOWED_EXTENSIONS.includes(ext) || DANGEROUS_EXTENSIONS.includes(ext)) {
-        alert(`Security Alert: Ang file extension na ".${ext}" ay nakaharang dahil sa virus risk.`);
-        return;
-      }
-      const isHeaderValid = await verifyFileMagicBytes(file);
-      if (!isHeaderValid) {
-        alert(`Security Alert: Faked or corrupted file structure detected on "${file.name}". File rejected.`);
-        return;
-      }
-    }
-
-    setIsUploading(true);
-    setUploadError('');
-    setCompletedCount(0);
-
-    const newlyCreated = [];
-    try {
-      for (let i = 0; i < filesToAdd.length; i++) {
-        const file = filesToAdd[i];
-        setCurrentUploadingFile(file.name);
-        setUploadProgress(1);
-
-        const result = await uploadFileToDrive(file, targetFolderId, accessToken, file.name, (percent) => {
-          setUploadProgress(percent);
-        });
-
-        if (result?.id) newlyCreated.push(result.id);
-        setCompletedCount(i + 1);
-      }
-
-      setMyCreatedIds((prev) => [...prev, ...newlyCreated]);
-      await loadFolderItems(targetFolderId);
-    } catch (err) {
-      setUploadError(err.message || 'Error uploading file');
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
   const handleFileChange = async (e) => {
     if (e.target.files && e.target.files.length > 0) {
       const selectedFiles = Array.from(e.target.files);
@@ -359,6 +326,12 @@ export default function App() {
         if (!isHeaderValid) {
           alert(`Security Alert: Faked file structure detected on "${file.name}".`);
           continue;
+        }
+
+        const isDuplicate = folderContents.some((item) => item.name.toLowerCase() === file.name.toLowerCase());
+        if (isDuplicate) {
+          const proceed = window.confirm(`Duplication Warning: Meron nang file sa folder na kapareho ng pangalan ("${file.name}"). Itutuloy pa rin ba ang pag-add?`);
+          if (!proceed) continue;
         }
 
         safeFiles.push(file);
@@ -503,6 +476,9 @@ export default function App() {
       saveHistoryItem(newReceipt);
 
       setFiles([]);
+      localStorage.removeItem('easysubmit_draft_name');
+      localStorage.removeItem('easysubmit_draft_section');
+      localStorage.removeItem('easysubmit_draft_subject');
 
       if (accessToken && (currentFolderId || activeFolderId)) {
         loadFolderItems(currentFolderId || activeFolderId);
@@ -578,14 +554,21 @@ export default function App() {
 
           <form onSubmit={handleSubmission} className="space-y-6">
             <div className="bg-white/5 border border-white/10 rounded-3xl p-5 sm:p-6 backdrop-blur-2xl space-y-5">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-blue-600/30 text-cyan-400 border border-blue-500/40 flex items-center justify-center font-bold text-xs shadow-md">
-                  1
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-blue-600/30 text-cyan-400 border border-blue-500/40 flex items-center justify-center font-bold text-xs shadow-md">
+                    1
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-white">Student & Submission Info</h3>
+                    <p className="text-[11px] text-slate-400">EasySubmit creates your personal folder using your info</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-sm font-bold text-white">Student & Submission Info</h3>
-                  <p className="text-[11px] text-slate-400">EasySubmit creates your personal folder using your info</p>
-                </div>
+                {(fullName || section || subject) && (
+                  <span className="text-[10px] text-cyan-400 font-bold flex items-center gap-1 bg-cyan-500/10 border border-cyan-500/20 px-2.5 py-1 rounded-full">
+                    <Save className="w-3 h-3" /> Auto-Saved
+                  </span>
+                )}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
@@ -713,13 +696,18 @@ export default function App() {
                   <div className="space-y-1.5 max-h-40 overflow-y-auto">
                     {files.map((file, idx) => (
                       <div key={idx} className="flex justify-between items-center p-3 bg-slate-900/90 border border-white/10 rounded-2xl">
-                        <div className="flex items-center gap-2 min-w-0">
+                        <div className="flex items-center gap-2 min-w-0 pr-2">
                           <FileText className="w-4 h-4 text-cyan-400 flex-shrink-0" />
                           <span className="truncate font-medium text-slate-200">{file.name}</span>
                         </div>
-                        <button type="button" onClick={() => handleRemoveFile(idx)} className="p-1 text-slate-400 hover:text-red-400">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button type="button" onClick={() => setPreviewFile(file)} className="p-1.5 text-slate-400 hover:text-cyan-400 hover:bg-white/5 rounded-xl transition" title="Preview File">
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button type="button" onClick={() => handleRemoveFile(idx)} className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition" title="Remove File">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -749,7 +737,6 @@ export default function App() {
                   onBreadcrumbClick={handleBreadcrumbClick}
                   onFolderClick={handleFolderClick}
                   onDeleteItem={handleDeleteItem}
-                  onAddFilesToFolder={handleAddFilesToFolder}
                   isLoading={isLoadingContents}
                   myCreatedIds={myCreatedIds}
                   currentUserEmail={user?.email}
@@ -888,6 +875,7 @@ export default function App() {
         onClose={() => setIsSettingsOpen(false)}
         settings={settings}
         onToggleSetting={(key) => setSettings((prev) => ({ ...prev, [key]: !prev[key] }))}
+        onUpdateSetting={(key, val) => setSettings((prev) => ({ ...prev, [key]: val }))}
         historyList={historyList}
         onClearHistory={handleClearHistory}
         onDeleteHistoryItem={handleDeleteHistoryItem}
@@ -904,6 +892,11 @@ export default function App() {
       <PrivacyModal
         isOpen={isPrivacyOpen}
         onClose={() => setIsPrivacyOpen(false)}
+      />
+      <FilePreviewModal
+        isOpen={Boolean(previewFile)}
+        onClose={() => setPreviewFile(null)}
+        file={previewFile}
       />
     </div>
   );
