@@ -82,28 +82,8 @@ export default function App() {
   const [receiptData, setReceiptData] = useState(null);
 
   useEffect(() => {
-    document.documentElement.classList.add('dark');
-
-    const handleContextMenu = (e) => e.preventDefault();
-    const handleKeyDown = (e) => {
-      if (
-        e.keyCode === 123 || 
-        (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) ||
-        (e.ctrlKey && e.keyCode === 85)
-      ) {
-        e.preventDefault();
-        return false;
-      }
-    };
-
-    window.addEventListener('contextmenu', handleContextMenu);
-    window.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      window.removeEventListener('contextmenu', handleContextMenu);
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, []);
+  document.documentElement.classList.add('dark');
+}, []);
 
   useEffect(() => {
     if (isHelpOpen || receiptData || isUploading || isSettingsOpen || isHistoryOpen) {
