@@ -1,6 +1,60 @@
 const DRIVE_API_BASE = 'https://www.googleapis.com/drive/v3';
 const UPLOAD_API_BASE = 'https://www.googleapis.com/upload/drive/v3';
 
+const MAGIC_NUMBERS = {
+  pdf: ['25504446'],
+  png: ['89504e47'],
+  jpg: ['ffd8ffe0', 'ffd8ffe1', 'ffd8ffe2', 'ffd8ffe3', 'ffd8ffe8'],
+  jpeg: ['ffd8ffe0', 'ffd8ffe1', 'ffd8ffe2', 'ffd8ffe3', 'ffd8ffe8'],
+  zip: ['504b0304', '504b0506', '504b0708'],
+  docx: ['504b0304'],
+  pptx: ['504b0304'],
+  xlsx: ['504b0304'],
+  rar: ['52617221'],
+};
+
+export const verifyFileMagicBytes = (file) => {
+  return new Promise((resolve) => {
+    const ext = file.name.split('.').pop().toLowerCase();
+    const expectedHeaders = MAGIC_NUMBERS[ext];
+    
+    if (!expectedHeaders) {
+      resolve(true);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = (e) => {
+      if (!e || !e.target || !e.target.result) {
+        resolve(false);
+        return;
+      }
+      const arr = new Uint8Array(e.target.result).subarray(0, 4);
+      let header = '';
+      for (let i = 0; i < arr.length; i++) {
+        header += arr[i].toString(16).padStart(2, '0');
+      }
+      
+      const isValid = expectedHeaders.some((hex) => header.startsWith(hex));
+      resolve(isValid);
+    };
+    reader.onerror = () => resolve(false);
+    reader.readAsArrayBuffer(file.slice(0, 4));
+  });
+};
+
+export const sanitizeString = (str) => {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .replace(/\//g, '&#x2F;')
+    .trim();
+};
+
 export const extractFolderId = (urlOrId) => {
   if (!urlOrId) return '';
   const trimmed = urlOrId.trim();
@@ -47,7 +101,7 @@ export const fetchFolderContents = async (folderId, accessToken) => {
 
 export const createDriveFolder = async (folderName, parentFolderId, accessToken) => {
   const metadata = {
-    name: folderName,
+    name: sanitizeString(folderName),
     mimeType: 'application/vnd.google-apps.folder',
     parents: [parentFolderId],
   };
@@ -69,9 +123,9 @@ export const createDriveFolder = async (folderName, parentFolderId, accessToken)
   return await response.json();
 };
 
-export const uploadFileToDrive = async (file, parentFolderId, accessToken, onProgress) => {
+export const uploadFileToDrive = async (file, parentFolderId, accessToken, customName, onProgress) => {
   const metadata = {
-    name: file.name,
+    name: sanitizeString(customName || file.name),
     parents: [parentFolderId],
   };
 
@@ -90,8 +144,8 @@ export const uploadFileToDrive = async (file, parentFolderId, accessToken, onPro
     if (xhr.upload && onProgress) {
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable) {
-          const percent = Math.round((e.loaded / e.total) * 100);
-          onProgress(percent);
+          const percent = Math.min(100, Math.max(1, Math.round((e.loaded / e.total) * 100)));
+          onProgress(percent, e.loaded, e.total);
         }
       };
     }
@@ -126,4 +180,16 @@ export const deleteDriveItem = async (fileOrFolderId, accessToken) => {
   }
 
   return true;
+};
+
+export const revokeGoogleToken = async (accessToken) => {
+  if (!accessToken) return;
+  try {
+    await fetch(`https://oauth2.googleapis.com/revoke?token=${accessToken}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    });
+  } catch (err) {
+    console.error('Error revoking token:', err);
+  }
 };

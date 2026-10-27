@@ -3,18 +3,23 @@ import {
   Folder, UploadCloud, Send, Link2, Clipboard, X,
   BookOpen, FileCheck, Package, ExternalLink, ShieldAlert,
   FileText, Trash2, Edit3, Users, RefreshCw, MinusCircle, Home,
-  FolderOpen, HardDrive, User, Lock, ShieldCheck
+  FolderOpen, HardDrive, User, Lock, ShieldCheck, Sliders, Clock
 } from "lucide-react";
 import FolderExplorer from "./components/FolderExplorer";
 import UploadProgressModal from './components/UploadProgressModal';
 import SubmissionReceiptModal from './components/SubmissionReceiptModal';
 import HelpModal from './components/HelpModal';
+import SettingsModal from './components/SettingsModal';
+import HistoryModal from './components/HistoryModal';
 import { 
   extractFolderId, 
   fetchFolderContents, 
   createDriveFolder, 
   uploadFileToDrive, 
-  deleteDriveItem 
+  deleteDriveItem,
+  verifyFileMagicBytes,
+  revokeGoogleToken,
+  sanitizeString
 } from './services/driveService';
 
 const GOOGLE_CLIENT_ID = "431007270977-j9h45it3o6fclmko97tttuioovqgb9m0.apps.googleusercontent.com";
@@ -38,6 +43,17 @@ export default function App() {
     return saved ? JSON.parse(saved) : [];
   });
 
+  const [settings, setSettings] = useState(() => {
+    const saved = localStorage.getItem('easysubmit_settings');
+    return saved ? JSON.parse(saved) : {
+      autoFormatFilename: false,
+      clientCompression: false,
+      rateLimiting: false
+    };
+  });
+
+  const [historyList, setHistoryList] = useState([]);
+
   const [driveInput, setDriveInput] = useState('');
   const [activeFolderId, setActiveFolderId] = useState('');
   const [currentFolderId, setCurrentFolderId] = useState('');
@@ -55,6 +71,8 @@ export default function App() {
   const [files, setFiles] = useState([]);
 
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -88,7 +106,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (isHelpOpen || receiptData || isUploading) {
+    if (isHelpOpen || receiptData || isUploading || isSettingsOpen || isHistoryOpen) {
       document.body.style.overflow = 'hidden';
       window.scrollTo({ top: 0, behavior: 'instant' });
     } else {
@@ -97,11 +115,44 @@ export default function App() {
     return () => {
       document.body.style.overflow = 'unset';
     };
-  }, [isHelpOpen, receiptData, isUploading]);
+  }, [isHelpOpen, receiptData, isUploading, isSettingsOpen, isHistoryOpen]);
 
   useEffect(() => {
     localStorage.setItem('easysubmit_my_ids', JSON.stringify(myCreatedIds));
   }, [myCreatedIds]);
+
+  useEffect(() => {
+    localStorage.setItem('easysubmit_settings', JSON.stringify(settings));
+  }, [settings]);
+
+  useEffect(() => {
+    if (user?.email) {
+      const savedHistory = localStorage.getItem(`easysubmit_history_${user.email.toLowerCase()}`);
+      setHistoryList(savedHistory ? JSON.parse(savedHistory) : []);
+    } else {
+      setHistoryList([]);
+    }
+  }, [user]);
+
+  const saveHistoryItem = (newItem) => {
+    if (!user?.email) return;
+    const updated = [newItem, ...historyList];
+    setHistoryList(updated);
+    localStorage.setItem(`easysubmit_history_${user.email.toLowerCase()}`, JSON.stringify(updated));
+  };
+
+  const handleClearHistory = () => {
+    if (!user?.email) return;
+    setHistoryList([]);
+    localStorage.removeItem(`easysubmit_history_${user.email.toLowerCase()}`);
+  };
+
+  const handleDeleteHistoryItem = (indexToDelete) => {
+    if (!user?.email) return;
+    const updated = historyList.filter((_, idx) => idx !== indexToDelete);
+    setHistoryList(updated);
+    localStorage.setItem(`easysubmit_history_${user.email.toLowerCase()}`, JSON.stringify(updated));
+  };
 
   useEffect(() => {
     if (window.google?.accounts?.oauth2) {
@@ -144,9 +195,13 @@ export default function App() {
     }
   };
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
+    if (accessToken) {
+      await revokeGoogleToken(accessToken);
+    }
     setUser(null);
     setAccessToken(null);
+    setHistoryList([]);
     sessionStorage.removeItem('easysubmit_token');
     sessionStorage.removeItem('easysubmit_user');
   };
@@ -207,7 +262,12 @@ export default function App() {
     for (const file of filesToAdd) {
       const ext = file.name.split('.').pop().toLowerCase();
       if (!ALLOWED_EXTENSIONS.includes(ext)) {
-        alert(`Security Alert: Ang file extension na ".${ext}" ay nakaharang dahil sa virus risk. Paki-upload lamang ang mga safe school documents/images.`);
+        alert(`Security Alert: Ang file extension na ".${ext}" ay nakaharang dahil sa virus risk.`);
+        return;
+      }
+      const isHeaderValid = await verifyFileMagicBytes(file);
+      if (!isHeaderValid) {
+        alert(`Security Alert: Faked or corrupted file structure detected on "${file.name}". File rejected.`);
         return;
       }
     }
@@ -221,9 +281,9 @@ export default function App() {
       for (let i = 0; i < filesToAdd.length; i++) {
         const file = filesToAdd[i];
         setCurrentUploadingFile(file.name);
-        setUploadProgress(0);
+        setUploadProgress(1);
 
-        const result = await uploadFileToDrive(file, targetFolderId, accessToken, (percent) => {
+        const result = await uploadFileToDrive(file, targetFolderId, accessToken, file.name, (percent) => {
           setUploadProgress(percent);
         });
 
@@ -240,7 +300,7 @@ export default function App() {
     }
   };
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     if (e.target.files && e.target.files.length > 0) {
       const selectedFiles = Array.from(e.target.files);
       const safeFiles = [];
@@ -248,10 +308,22 @@ export default function App() {
       for (const file of selectedFiles) {
         const ext = file.name.split('.').pop().toLowerCase();
         if (!ALLOWED_EXTENSIONS.includes(ext)) {
-          alert(`Security Warning: Hindi pinapayagan ang ".${ext}" file type para maiwasan ang virus.`);
-        } else {
-          safeFiles.push(file);
+          alert(`Security Warning: Hindi pinapayagan ang ".${ext}" file type.`);
+          continue;
         }
+
+        if (settings.rateLimiting && file.size > 50 * 1024 * 1024) {
+          alert(`Security Limit: Ang file na "${file.name}" ay sobra sa 50MB limit.`);
+          continue;
+        }
+
+        const isHeaderValid = await verifyFileMagicBytes(file);
+        if (!isHeaderValid) {
+          alert(`Security Alert: Faked file structure detected on "${file.name}".`);
+          continue;
+        }
+
+        safeFiles.push(file);
       }
 
       setFiles((prev) => [...prev, ...safeFiles]);
@@ -282,7 +354,7 @@ export default function App() {
 
   const handleVerifyFolder = async (folderLinkOrId) => {
     if (folderLinkOrId.includes('http') && !folderLinkOrId.includes('drive.google.com')) {
-      alert('Security Protection: Tanging official Google Drive links lamang (https://drive.google.com) ang tinatanggap.');
+      alert('Security Protection: Tanging official Google Drive links lamang ang tinatanggap.');
       return;
     }
 
@@ -326,18 +398,22 @@ export default function App() {
 
     try {
       let targetFolderId = activeFolderId;
-      const finalFolderName = customSubmissionName.trim() || submissionType;
+      const cleanFullName = sanitizeString(fullName);
+      const cleanSection = sanitizeString(section);
+      const cleanCustomName = sanitizeString(customSubmissionName);
+
+      const finalFolderName = cleanCustomName || submissionType;
 
       if (accessToken) {
-        const studentLabel = fullName.trim() || 'Student Name';
-        const studentFolderName = section.trim()
-          ? `[${section.trim()}] ${studentLabel}`
+        const studentLabel = cleanFullName || 'Student Name';
+        const studentFolderName = cleanSection
+          ? `[${cleanSection}] ${studentLabel}`
           : studentLabel;
 
         const studentFolder = await createDriveFolder(studentFolderName, activeFolderId, accessToken);
         if (studentFolder?.id) createdIdsThisSession.push(studentFolder.id);
 
-        if (submissionType === 'None' && !customSubmissionName.trim()) {
+        if (submissionType === 'None' && !cleanCustomName) {
           targetFolderId = studentFolder.id;
         } else {
           const submissionFolder = await createDriveFolder(finalFolderName, studentFolder.id, accessToken);
@@ -350,11 +426,18 @@ export default function App() {
       for (let i = 0; i < allFilesToUpload.length; i++) {
         const file = allFilesToUpload[i];
         setCurrentUploadingFile(file.name);
-        setUploadProgress(0);
+        setUploadProgress(1);
 
-        let result = { name: file.name };
+        let uploadName = file.name;
+        if (settings.autoFormatFilename) {
+          const ext = file.name.split('.').pop();
+          const label = cleanSection ? `[${cleanSection}] ` : '';
+          uploadName = `${label}${cleanFullName || 'Student'} - ${finalFolderName}.${ext}`;
+        }
+
+        let result = { name: uploadName };
         if (accessToken) {
-          result = await uploadFileToDrive(file, targetFolderId, accessToken, (percent) => {
+          result = await uploadFileToDrive(file, targetFolderId, accessToken, uploadName, (percent) => {
             setUploadProgress(percent);
           });
           if (result?.id) createdIdsThisSession.push(result.id);
@@ -368,15 +451,18 @@ export default function App() {
       const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
       const randomStr = Math.random().toString(36).substring(2, 8).toUpperCase();
 
-      setReceiptData({
+      const newReceipt = {
         receiptId: `ES-${dateStr}-${randomStr}`,
-        fullName,
-        section: section.trim() || 'N/A',
-        submissionType: submissionType === 'None' && !customSubmissionName.trim() ? 'Direct Upload' : finalFolderName,
+        fullName: cleanFullName,
+        section: cleanSection || 'N/A',
+        submissionType: submissionType === 'None' && !cleanCustomName ? 'Direct Upload' : finalFolderName,
         timestamp: new Date().toLocaleString(),
         files: uploadedResults,
         folderUrl: `https://drive.google.com/drive/folders/${targetFolderId}`,
-      });
+      };
+
+      setReceiptData(newReceipt);
+      saveHistoryItem(newReceipt);
 
       setFiles([]);
 
@@ -412,14 +498,18 @@ export default function App() {
             <Home className="w-4 h-4" />
             <span>Home</span>
           </button>
+          <button type="button" onClick={() => setIsHistoryOpen(true)} className="px-4 py-1.5 rounded-xl text-slate-300 hover:text-white font-semibold text-xs flex items-center gap-2 hover:bg-white/5 transition">
+            <Clock className="w-4 h-4" />
+            <span>History</span>
+          </button>
           <button type="button" onClick={() => setIsHelpOpen(true)} className="px-4 py-1.5 rounded-xl text-slate-300 hover:text-white font-semibold text-xs flex items-center gap-2 hover:bg-white/5 transition">
             <BookOpen className="w-4 h-4" />
             <span>How It Works</span>
           </button>
-          <a href={`https://drive.google.com/drive/folders/${currentFolderId || activeFolderId || ''}`} target="_blank" rel="noreferrer" className="px-4 py-1.5 rounded-xl text-slate-300 hover:text-white font-semibold text-xs flex items-center gap-2 hover:bg-white/5 transition">
-            <FolderOpen className="w-4 h-4" />
-            <span>Drive</span>
-          </a>
+          <button type="button" onClick={() => setIsSettingsOpen(true)} className="px-3 py-1.5 rounded-xl text-slate-300 hover:text-white font-semibold text-xs flex items-center gap-1.5 hover:bg-white/5 transition">
+            <Sliders className="w-4 h-4 text-cyan-400" />
+            <span>Settings</span>
+          </button>
         </nav>
 
         <div className="flex items-center gap-3">
@@ -451,14 +541,18 @@ export default function App() {
               <Home className="w-4 h-4" />
               <span>Home</span>
             </button>
+            <button type="button" onClick={() => setIsHistoryOpen(true)} className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 font-semibold rounded-2xl text-xs transition">
+              <Clock className="w-4 h-4" />
+              <span>Submission History</span>
+            </button>
+            <button type="button" onClick={() => setIsSettingsOpen(true)} className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 font-semibold rounded-2xl text-xs transition">
+              <Sliders className="w-4 h-4 text-cyan-400" />
+              <span>Settings & Controls</span>
+            </button>
             <button type="button" onClick={() => setIsHelpOpen(true)} className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 font-semibold rounded-2xl text-xs transition">
               <BookOpen className="w-4 h-4" />
               <span>Submit Homework</span>
             </button>
-            <a href={`https://drive.google.com/drive/folders/${currentFolderId || activeFolderId || ''}`} target="_blank" rel="noreferrer" className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 font-semibold rounded-2xl text-xs transition">
-              <HardDrive className="w-4 h-4" />
-              <span>Google Drive</span>
-            </a>
           </div>
 
           <div className="p-4 bg-gradient-to-br from-blue-900/40 to-purple-900/40 border border-blue-500/20 rounded-2xl space-y-2 text-xs">
@@ -783,6 +877,20 @@ export default function App() {
       />
       <SubmissionReceiptModal receiptData={receiptData} onClose={() => setReceiptData(null)} />
       <HelpModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        settings={settings}
+        onToggleSetting={(key) => setSettings((prev) => ({ ...prev, [key]: !prev[key] }))}
+      />
+      <HistoryModal
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        historyList={historyList}
+        onClearHistory={handleClearHistory}
+        onDeleteHistoryItem={handleDeleteHistoryItem}
+        currentUserEmail={user?.email}
+      />
     </div>
   );
 }
