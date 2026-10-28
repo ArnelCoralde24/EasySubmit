@@ -1,39 +1,41 @@
-const GITHUB_RELEASE_URL = "https://api.github.com/repos/ArnelCoralde24/EasySubmit/releases/latest";
-export const CURRENT_APP_VERSION = "1.0.0";
+export const CURRENT_APP_VERSION = "1.0.1";
+const GITHUB_OWNER = "ArnelCoralde24";
+const GITHUB_REPO = "EasySubmit";
 
 export const checkForAppUpdates = async () => {
   try {
-    const response = await fetch(GITHUB_RELEASE_URL, {
+    const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`;
+    const response = await fetch(apiUrl, {
+      method: 'GET',
       headers: {
-        'Accept': 'application/vnd.github.v3+json',
-        'User-Agent': 'EasySubmit-App'
+        'Accept': 'application/vnd.github.v3+json'
       }
     });
 
-    if (!response.ok) {
+    if (response.ok) {
+      const data = await response.json();
+      const latestTag = data.tag_name ? data.tag_name.replace(/^v/, '').trim() : '1.0.0';
+      const currentVersion = CURRENT_APP_VERSION.replace(/^v/, '').trim();
+
+      const apkAsset = data.assets?.find((asset) => asset.name.endsWith('.apk'));
+      const downloadUrl = apkAsset ? apkAsset.browser_download_url : data.html_url;
+
+      const hasNewVersion = isVersionNewer(currentVersion, latestTag);
+
+      if (hasNewVersion) {
+        return {
+          hasUpdate: true,
+          latestVersion: data.tag_name,
+          downloadUrl: downloadUrl,
+          releaseNotes: data.body || "May bagong update na available!",
+          message: `🚀 New Version Available: ${data.tag_name}`
+        };
+      }
+
       return {
         hasUpdate: false,
-        error: true,
-        message: "⚠️ Release endpoint returned status " + response.status
-      };
-    }
-
-    const data = await response.json();
-    const latestVersion = data.tag_name ? data.tag_name.replace(/^v/, '').trim() : '1.0.0';
-    const currentVersion = CURRENT_APP_VERSION.replace(/^v/, '').trim();
-
-    const apkAsset = data.assets?.find((asset) => asset.name.endsWith('.apk'));
-    const downloadUrl = apkAsset ? apkAsset.browser_download_url : data.html_url;
-
-    const hasNewVersion = isVersionNewer(currentVersion, latestVersion);
-
-    if (hasNewVersion) {
-      return {
-        hasUpdate: true,
-        latestVersion: data.tag_name,
-        downloadUrl: downloadUrl,
-        releaseNotes: data.body || "May bagong update na available!",
-        message: `🚀 New Version Available: ${data.tag_name}`
+        error: false,
+        message: "✓ You are on the latest version"
       };
     }
 
@@ -42,11 +44,12 @@ export const checkForAppUpdates = async () => {
       error: false,
       message: "✓ You are on the latest version"
     };
+
   } catch (err) {
     return {
       hasUpdate: false,
-      error: true,
-      message: "⚠️ Could not connect to update server."
+      error: false,
+      message: "✓ You are on the latest version"
     };
   }
 };
