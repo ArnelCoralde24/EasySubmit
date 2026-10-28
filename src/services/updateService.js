@@ -1,42 +1,59 @@
-export const CURRENT_APP_VERSION = "1.0.1";
+import { Capacitor, CapacitorHttp } from '@capacitor/core';
+
+export const CURRENT_APP_VERSION = "1.0.0";
 const GITHUB_OWNER = "ArnelCoralde24";
 const GITHUB_REPO = "EasySubmit";
 
 export const checkForAppUpdates = async () => {
+  const cacheBuster = new Date().getTime();
+  const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest?t=${cacheBuster}`;
+
   try {
-    const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`;
-    const response = await fetch(apiUrl, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/vnd.github.v3+json'
+    let responseData = null;
+
+    if (Capacitor.isNativePlatform()) {
+      const response = await CapacitorHttp.get({
+        url: apiUrl,
+        headers: {
+          'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'EasySubmitApp/1.0',
+          'Cache-Control': 'no-cache'
+        }
+      });
+      if (response.status === 200) {
+        responseData = response.data;
       }
-    });
+    } else {
+      const response = await fetch(apiUrl, {
+        headers: {
+          'Accept': 'application/vnd.github.v3+json',
+          'Cache-Control': 'no-cache'
+        }
+      });
+      if (response.ok) {
+        responseData = await response.json();
+      }
+    }
 
-    if (response.ok) {
-      const data = await response.json();
-      const latestTag = data.tag_name ? data.tag_name.replace(/^v/, '').trim() : '1.0.0';
-      const currentVersion = CURRENT_APP_VERSION.replace(/^v/, '').trim();
+    if (responseData && responseData.tag_name) {
+      const rawLatest = String(responseData.tag_name).trim();
+      const latestTag = rawLatest.replace(/^v/i, '').trim();
+      const currentVersion = CURRENT_APP_VERSION.replace(/^v/i, '').trim();
 
-      const apkAsset = data.assets?.find((asset) => asset.name.endsWith('.apk'));
-      const downloadUrl = apkAsset ? apkAsset.browser_download_url : data.html_url;
+      const apkAsset = responseData.assets?.find((asset) => asset.name.endsWith('.apk'));
+      const downloadUrl = apkAsset ? apkAsset.browser_download_url : responseData.html_url;
 
       const hasNewVersion = isVersionNewer(currentVersion, latestTag);
 
       if (hasNewVersion) {
         return {
           hasUpdate: true,
-          latestVersion: data.tag_name,
+          latestVersion: rawLatest,
           downloadUrl: downloadUrl,
-          releaseNotes: data.body || "May bagong update na available!",
-          message: `🚀 New Version Available: ${data.tag_name}`
+          releaseNotes: responseData.body || "May bagong update na available para sa EasySubmit Mobile!",
+          message: `🚀 New Version Available: ${rawLatest}`
         };
       }
-
-      return {
-        hasUpdate: false,
-        error: false,
-        message: "✓ You are on the latest version"
-      };
     }
 
     return {
@@ -48,22 +65,32 @@ export const checkForAppUpdates = async () => {
   } catch (err) {
     return {
       hasUpdate: false,
-      error: false,
-      message: "✓ You are on the latest version"
+      error: true,
+      message: "⚠️ Could not connect to update server."
     };
   }
 };
 
-const isVersionNewer = (current, latest) => {
-  const cParts = current.split('.').map(Number);
-  const lParts = latest.split('.').map(Number);
+const isVersionNewer = (currentStr, latestStr) => {
+  const parseVersion = (str) => {
+    return str
+      .replace(/[^0-9.]/g, '')
+      .split('.')
+      .map((num) => parseInt(num, 10) || 0);
+  };
 
-  for (let i = 0; i < Math.max(cParts.length, lParts.length); i++) {
-    const c = cParts[i] || 0;
-    const l = lParts[i] || 0;
-    if (l > c) return true;
-    if (l < c) return false;
+  const currentParts = parseVersion(currentStr);
+  const latestParts = parseVersion(latestStr);
+  const maxLength = Math.max(currentParts.length, latestParts.length);
+
+  for (let i = 0; i < maxLength; i++) {
+    const curr = currentParts[i] || 0;
+    const late = latestParts[i] || 0;
+
+    if (late > curr) return true;
+    if (late < curr) return false;
   }
+
   return false;
 };
 

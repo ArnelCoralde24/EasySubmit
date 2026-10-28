@@ -4,9 +4,12 @@
   "webDir": "dist",
   "plugins": {
     "GoogleAuth": {
-      "scopes": ["profile", "email", "https://www.googleapis.com/auth/drive.file"],
-      "serverClientId": "YOUR_WEB_CLIENT_ID.apps.googleusercontent.com",
+      "scopes": ["profile", "email", "https://www.googleapis.com/auth/drive.file", "https://www.googleapis.com/auth/drive.readonly", "https://www.googleapis.com/auth/drive.appdata"],
+      "serverClientId": "431007270977-j9h45it3o6fclmko97tttuioovqgb9m0.apps.googleusercontent.com",
       "forceCodeForRefreshToken": true
+    },
+    "CapacitorHttp": {
+      "enabled": true
     }
   }
 }

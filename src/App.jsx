@@ -4,7 +4,6 @@ import {
   FileText, Trash2, Users, RefreshCw, MinusCircle, Home,
   FolderOpen, ShieldCheck, Sliders, Clock, Eye, Save
 } from "lucide-react";
-import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 import { Clipboard } from '@capacitor/clipboard';
 import { Capacitor } from '@capacitor/core';
 import Header from "./components/Header";
@@ -16,6 +15,7 @@ import SettingsModal from './components/SettingsModal';
 import HistoryModal from './components/HistoryModal';
 import PrivacyModal from './components/PrivacyModal';
 import FilePreviewModal from './components/FilePreviewModal';
+import { initGoogleAuth, signInWithGoogle, signOutGoogle } from './services/googleAuth';
 import { 
   extractFolderId, 
   fetchFolderContents, 
@@ -121,13 +121,7 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.classList.add('dark');
-    if (Capacitor.isNativePlatform()) {
-      GoogleAuth.initialize({
-        clientId: GOOGLE_CLIENT_ID,
-        scopes: ['profile', 'email', 'https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/drive.readonly', 'https://www.googleapis.com/auth/drive.appdata'],
-        grantOfflineAccess: true,
-      });
-    }
+    initGoogleAuth();
   }, []);
 
   useEffect(() => {
@@ -313,24 +307,19 @@ export default function App() {
 
   const handleConnectDrive = async () => {
     if (Capacitor.isNativePlatform()) {
-      try {
-        const googleUser = await GoogleAuth.signIn();
-        const token = googleUser.authentication?.accessToken || googleUser.authentication?.idToken;
+      const result = await signInWithGoogle();
+      if (result.success) {
+        setAccessToken(result.accessToken || result.idToken);
+        localStorage.setItem('easysubmit_token', result.accessToken || result.idToken);
 
-        if (token) {
-          setAccessToken(token);
-          localStorage.setItem('easysubmit_token', token);
-
-          const userData = {
-            name: googleUser.displayName || googleUser.givenName || 'Connected User',
-            email: googleUser.email || '',
-            picture: googleUser.imageUrl || ''
-          };
-          setUser(userData);
-          localStorage.setItem('easysubmit_user', JSON.stringify(userData));
-        }
-      } catch (err) {
-        console.error('Native Google Sign-In Error:', err);
+        const userData = {
+          name: result.name || 'Connected User',
+          email: result.email || '',
+          picture: result.user?.imageUrl || ''
+        };
+        setUser(userData);
+        localStorage.setItem('easysubmit_user', JSON.stringify(userData));
+      } else {
         alert('Google Sign-In failed or was canceled.');
       }
     } else {
@@ -348,11 +337,7 @@ export default function App() {
 
   const handleSignOut = async () => {
     if (Capacitor.isNativePlatform()) {
-      try {
-        await GoogleAuth.signOut();
-      } catch (e) {
-        console.warn(e);
-      }
+      await signOutGoogle();
     } else if (accessToken) {
       await revokeGoogleToken(accessToken);
     }
