@@ -1,5 +1,26 @@
-import React, { useState } from 'react';
-import { X, Sliders, ShieldCheck, Zap, FileText, Clock, Trash2, ExternalLink, AlertCircle, Archive, Lock } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { 
+  X, 
+  Sliders, 
+  ShieldCheck, 
+  Zap, 
+  FileText, 
+  Clock, 
+  Trash2, 
+  ExternalLink, 
+  AlertCircle, 
+  Archive, 
+  Lock,
+  Smartphone,
+  RefreshCw,
+  Download,
+  CheckCircle2,
+  Sparkles
+} from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
+
+const CURRENT_APP_VERSION = '1.0.0';
+const GITHUB_REPO = 'ArnelCoralde24/EasySubmit';
 
 export default function SettingsModal({
   isOpen,
@@ -13,6 +34,72 @@ export default function SettingsModal({
   currentUserEmail
 }) {
   const [activeTab, setActiveTab] = useState('settings');
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const [updateStatus, setUpdateStatus] = useState(null);
+  const [updateData, setUpdateData] = useState(null);
+  const [toastMessage, setToastMessage] = useState('');
+
+  const isAndroidNative = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
+
+  useEffect(() => {
+    if (isOpen && isAndroidNative) {
+      handleCheckForUpdates(false);
+    }
+  }, [isOpen]);
+
+  const handleCheckForUpdates = async (isManual = true) => {
+    setCheckingUpdate(true);
+    setToastMessage('');
+
+    try {
+      const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`);
+      
+      if (!response.ok) {
+        throw new Error('Release not found');
+      }
+
+      const data = await response.json();
+      const latestTag = data.tag_name ? data.tag_name.replace('v', '').trim() : '1.0.0';
+
+      const apkAsset = data.assets?.find(asset => asset.name.endsWith('.apk'));
+      const downloadUrl = apkAsset ? apkAsset.browser_download_url : data.html_url;
+
+      const hasNewVersion = isVersionNewer(CURRENT_APP_VERSION, latestTag);
+
+      if (hasNewVersion) {
+        setUpdateStatus('available');
+        setUpdateData({
+          version: latestTag,
+          downloadUrl,
+          notes: data.body || 'New fixes and performance improvements available.'
+        });
+        if (isManual) setToastMessage('🚀 New version available!');
+      } else {
+        setUpdateStatus('latest');
+        setUpdateData({ version: CURRENT_APP_VERSION });
+        if (isManual) setToastMessage('✅ You are on the latest version!');
+      }
+    } catch (err) {
+      console.error(err);
+      setUpdateStatus('error');
+      if (isManual) setToastMessage('⚠️ Could not connect to update server.');
+    } finally {
+      setCheckingUpdate(false);
+    }
+  };
+
+  const isVersionNewer = (current, latest) => {
+    const cParts = current.split('.').map(Number);
+    const lParts = latest.split('.').map(Number);
+
+    for (let i = 0; i < Math.max(cParts.length, lParts.length); i++) {
+      const c = cParts[i] || 0;
+      const l = lParts[i] || 0;
+      if (l > c) return true;
+      if (l < c) return false;
+    }
+    return false;
+  };
 
   if (!isOpen) return null;
 
@@ -21,6 +108,7 @@ export default function SettingsModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-2xl animate-fade-in select-none">
       <div className="w-full max-w-xl bg-gradient-to-b from-slate-900/95 via-slate-900/90 to-slate-950/95 border border-white/15 rounded-3xl p-4 sm:p-6 space-y-4 sm:space-y-5 shadow-[0_0_60px_rgba(37,99,235,0.3)] relative overflow-hidden max-h-[90vh] flex flex-col">
+        
         <div className="flex items-center justify-between pb-3 border-b border-white/10">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-2xl bg-blue-600/20 text-cyan-400 border border-blue-500/30 flex items-center justify-center shadow-lg shadow-cyan-500/20">
@@ -28,7 +116,7 @@ export default function SettingsModal({
             </div>
             <div>
               <h2 className="text-sm sm:text-base font-bold text-white tracking-wide">Control Center</h2>
-              <p className="text-[10px] sm:text-[11px] text-slate-400">Settings & Controls</p>
+              <p className="text-[10px] sm:text-[11px] text-slate-400">Settings & Preferences</p>
             </div>
           </div>
           <button
@@ -69,6 +157,77 @@ export default function SettingsModal({
 
         {(activeTab === 'settings' || window.innerWidth >= 768) && (
           <div className="space-y-3 text-xs overflow-y-auto pr-1 flex-1">
+
+            {isAndroidNative && (
+              <div className="p-3.5 sm:p-4 bg-slate-950/80 border border-cyan-500/30 rounded-2xl space-y-3 relative overflow-hidden shadow-lg shadow-cyan-950/40">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 flex items-center justify-center">
+                      <Smartphone className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-slate-100 text-xs">EasySubmit Mobile</span>
+                        <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 rounded-full">
+                          v{CURRENT_APP_VERSION}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-400">Android System Update Center</p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={checkingUpdate}
+                    onClick={() => handleCheckForUpdates(true)}
+                    className="p-2 bg-white/5 hover:bg-white/10 active:scale-95 border border-white/10 rounded-xl text-slate-300 hover:text-white transition flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 text-cyan-400 ${checkingUpdate ? 'animate-spin' : ''}`} />
+                    <span className="text-[11px] font-semibold hidden sm:inline">Refresh</span>
+                  </button>
+                </div>
+
+                {updateStatus === 'available' && updateData && (
+                  <div className="p-3 bg-amber-500/15 border border-amber-500/40 rounded-xl space-y-2.5 animate-fade-in">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-amber-300 flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5" />
+                        New Version Available: v{updateData.version}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-slate-300 leading-relaxed line-clamp-2">
+                      {updateData.notes}
+                    </p>
+                    <a
+                      href={updateData.downloadUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="w-full py-2 px-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-600/30 flex items-center justify-center gap-2 transition active:scale-98"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Download & Update APK</span>
+                    </a>
+                  </div>
+                )}
+
+                {updateStatus === 'latest' && (
+                  <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/25 rounded-xl flex items-center justify-between animate-fade-in">
+                    <div className="flex items-center gap-2 text-emerald-400">
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span className="text-[11px] font-bold text-emerald-300">You are on the latest version</span>
+                    </div>
+                    <span className="text-[10px] font-mono text-emerald-400/80">Up to date</span>
+                  </div>
+                )}
+
+                {toastMessage && (
+                  <p className="text-[10px] font-medium text-cyan-300 text-center animate-fade-in pt-0.5">
+                    {toastMessage}
+                  </p>
+                )}
+              </div>
+            )}
+
             <div className="flex items-center justify-between p-3.5 sm:p-4 bg-slate-950/60 border border-white/10 rounded-2xl hover:border-cyan-500/30 transition">
               <div className="space-y-0.5 pr-4">
                 <div className="flex items-center gap-2 font-bold text-slate-200">
@@ -200,6 +359,7 @@ export default function SettingsModal({
                 </div>
               )}
             </div>
+
           </div>
         )}
 
@@ -283,6 +443,7 @@ export default function SettingsModal({
             Done
           </button>
         </div>
+
       </div>
     </div>
   );
