@@ -5,7 +5,8 @@ export const checkForAppUpdates = async () => {
   try {
     const response = await fetch(GITHUB_RELEASE_URL, {
       headers: {
-        'Accept': 'application/vnd.github.v3+json'
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'EasySubmit-App'
       }
     });
 
@@ -13,7 +14,7 @@ export const checkForAppUpdates = async () => {
       return {
         hasUpdate: false,
         error: true,
-        message: "⚠️ Could not connect to update server."
+        message: "⚠️ Release endpoint returned status " + response.status
       };
     }
 
@@ -31,7 +32,7 @@ export const checkForAppUpdates = async () => {
         hasUpdate: true,
         latestVersion: data.tag_name,
         downloadUrl: downloadUrl,
-        releaseNotes: data.body || "New fixes and performance improvements available.",
+        releaseNotes: data.body || "May bagong update na available!",
         message: `🚀 New Version Available: ${data.tag_name}`
       };
     }
