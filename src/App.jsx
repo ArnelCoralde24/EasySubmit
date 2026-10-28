@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { 
   BookOpen, FileCheck, Package, UploadCloud, Send, Link2, Clipboard, X,
   FileText, Trash2, Users, RefreshCw, MinusCircle, Home,
@@ -37,8 +37,12 @@ export default function App() {
   const inactivityTimerRef = useRef(null);
 
   const [user, setUser] = useState(() => {
-    const savedUser = localStorage.getItem('easysubmit_user');
-    return savedUser ? JSON.parse(savedUser) : null;
+    try {
+      const savedUser = localStorage.getItem('easysubmit_user');
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch {
+      return null;
+    }
   });
 
   const [accessToken, setAccessToken] = useState(() => {
@@ -46,20 +50,35 @@ export default function App() {
   });
 
   const [myCreatedIds, setMyCreatedIds] = useState(() => {
-    const saved = localStorage.getItem('easysubmit_my_ids');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('easysubmit_my_ids');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
   });
 
   const [settings, setSettings] = useState(() => {
-    const saved = localStorage.getItem('easysubmit_settings');
-    return saved ? JSON.parse(saved) : {
-      autoFormatFilename: false,
-      clientCompression: false,
-      rateLimiting: false,
-      autoExtractZip: false,
-      autoLockEnabled: false,
-      autoLockMinutes: 15
-    };
+    try {
+      const saved = localStorage.getItem('easysubmit_settings');
+      return saved ? JSON.parse(saved) : {
+        autoFormatFilename: false,
+        clientCompression: false,
+        rateLimiting: false,
+        autoExtractZip: false,
+        autoLockEnabled: false,
+        autoLockMinutes: 15
+      };
+    } catch {
+      return {
+        autoFormatFilename: false,
+        clientCompression: false,
+        rateLimiting: false,
+        autoExtractZip: false,
+        autoLockEnabled: false,
+        autoLockMinutes: 15
+      };
+    }
   });
 
   const [historyList, setHistoryList] = useState([]);
@@ -105,12 +124,26 @@ export default function App() {
     localStorage.setItem('easysubmit_draft_drive_input', driveInput);
   }, [fullName, section, subject, driveInput]);
 
-  // AUTO-VERIFY GOOGLE DRIVE LINK ON INITIAL LOAD & DRAFT RESTORE
+  const handleVerifyFolder = useCallback((folderLinkOrId) => {
+    if (!folderLinkOrId) return;
+    if (folderLinkOrId.includes('http') && !folderLinkOrId.includes('drive.google.com')) {
+      alert('Security Protection: Tanging official Google Drive links lamang ang tinatanggap.');
+      return;
+    }
+
+    const id = extractFolderId(folderLinkOrId);
+    if (!id) return;
+    setActiveFolderId(id);
+    setCurrentFolderId(id);
+    setBreadcrumbs([{ id, name: 'Root Folder' }]);
+    setIsAccessClosed(false);
+  }, []);
+
   useEffect(() => {
     if (driveInput && !activeFolderId) {
       handleVerifyFolder(driveInput);
     }
-  }, [driveInput]);
+  }, [driveInput, activeFolderId, handleVerifyFolder]);
 
   useEffect(() => {
     if (isHelpOpen || receiptData || isUploading || isSettingsOpen || isHistoryOpen || isPrivacyOpen || previewFile) {
@@ -132,34 +165,34 @@ export default function App() {
     localStorage.setItem('easysubmit_settings', JSON.stringify(settings));
   }, [settings]);
 
-  // AUTOMATIC REAL-TIME HISTORY SYNC ACROSS DEVICES (NO RE-LOGIN REQUIRED)
   useEffect(() => {
+    let isMounted = true;
+
     const syncHistory = async () => {
-      if (accessToken) {
-        try {
-          const cloudData = await fetchCloudHistory(accessToken);
-          if (cloudData && Array.isArray(cloudData)) {
-            setHistoryList(cloudData);
-            if (user?.email) {
-              localStorage.setItem(`easysubmit_history_${user.email.toLowerCase()}`, JSON.stringify(cloudData));
-            }
-          } else if (user?.email) {
-            const localData = localStorage.getItem(`easysubmit_history_${user.email.toLowerCase()}`);
-            if (localData) {
-              const parsed = JSON.parse(localData);
-              setHistoryList(parsed);
-              await saveCloudHistory(parsed, accessToken);
-            }
+      if (!accessToken) return;
+
+      try {
+        const cloudData = await fetchCloudHistory(accessToken);
+        if (isMounted && Array.isArray(cloudData)) {
+          setHistoryList(cloudData);
+          if (user?.email) {
+            localStorage.setItem(`easysubmit_history_${user.email.toLowerCase()}`, JSON.stringify(cloudData));
           }
-        } catch (err) {
-          console.warn('Cloud history sync warning:', err);
+        }
+      } catch (err) {
+        if (err?.status === 401 || err?.message?.includes('401')) {
+          setAccessToken(null);
+          localStorage.removeItem('easysubmit_token');
         }
       }
     };
 
     syncHistory();
-    const interval = setInterval(syncHistory, 10000); // Polling every 10s for instant cross-desktop sync
-    return () => clearInterval(interval);
+    const interval = setInterval(syncHistory, 15000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, [accessToken, user?.email]);
 
   useEffect(() => {
@@ -219,11 +252,11 @@ export default function App() {
     }
   };
 
-  const initGoogleClient = () => {
+  const initGoogleClient = useCallback(() => {
     if (window.google?.accounts?.oauth2) {
       tokenClientRef.current = window.google.accounts.oauth2.initTokenClient({
         client_id: GOOGLE_CLIENT_ID,
-        scope: 'email profile https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly',
+        scope: 'email profile https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.appdata',
         callback: async (response) => {
           if (response.error) {
             console.error(response);
@@ -252,7 +285,7 @@ export default function App() {
       return true;
     }
     return false;
-  };
+  }, []);
 
   useEffect(() => {
     if (!initGoogleClient()) {
@@ -263,7 +296,7 @@ export default function App() {
       }, 500);
       return () => clearInterval(interval);
     }
-  }, []);
+  }, [initGoogleClient]);
 
   const handleConnectDrive = () => {
     if (tokenClientRef.current) {
@@ -288,7 +321,7 @@ export default function App() {
     localStorage.removeItem('easysubmit_user');
   };
 
-  const loadFolderItems = async (targetId, silent = false) => {
+  const loadFolderItems = useCallback(async (targetId, silent = false) => {
     if (!accessToken || !targetId) return;
     if (!silent) setIsLoadingContents(true);
     try {
@@ -296,12 +329,15 @@ export default function App() {
       setFolderContents(result.files || []);
       setIsAccessClosed(result.isClosed);
     } catch (err) {
-      console.error(err);
+      if (err?.status === 401 || err?.message?.includes('401')) {
+        setAccessToken(null);
+        localStorage.removeItem('easysubmit_token');
+      }
       setIsAccessClosed(false);
     } finally {
       if (!silent) setIsLoadingContents(false);
     }
-  };
+  }, [accessToken]);
 
   useEffect(() => {
     const targetFolder = currentFolderId || activeFolderId;
@@ -309,10 +345,10 @@ export default function App() {
       loadFolderItems(targetFolder);
       const interval = setInterval(() => {
         loadFolderItems(targetFolder, true);
-      }, 5000);
+      }, 8000);
       return () => clearInterval(interval);
     }
-  }, [activeFolderId, currentFolderId, accessToken]);
+  }, [activeFolderId, currentFolderId, accessToken, loadFolderItems]);
 
   const handleFolderClick = (folder) => {
     setCurrentFolderId(folder.id);
@@ -438,21 +474,6 @@ export default function App() {
     setCurrentFolderId('');
     setFolderContents([]);
     setBreadcrumbs([]);
-    setIsAccessClosed(false);
-  };
-
-  const handleVerifyFolder = async (folderLinkOrId) => {
-    if (!folderLinkOrId) return;
-    if (folderLinkOrId.includes('http') && !folderLinkOrId.includes('drive.google.com')) {
-      alert('Security Protection: Tanging official Google Drive links lamang ang tinatanggap.');
-      return;
-    }
-
-    const id = extractFolderId(folderLinkOrId);
-    if (!id) return;
-    setActiveFolderId(id);
-    setCurrentFolderId(id);
-    setBreadcrumbs([{ id, name: 'Root Folder' }]);
     setIsAccessClosed(false);
   };
 
