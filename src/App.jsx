@@ -333,7 +333,7 @@ export default function App() {
           'X-Title': 'EasySubmit Security Agent'
         },
         body: JSON.stringify({
-          model: 'meta-llama/llama-guard-3-8b',
+          model: 'meta-llama/llama-3.1-8b-instruct:free',
           messages: [
             {
               role: 'user',
