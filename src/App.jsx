@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { 
-  BookOpen, FileCheck, Package, UploadCloud, Send, Link2, Clipboard, X,
+  BookOpen, FileCheck, Package, UploadCloud, Send, Link2, Clipboard as ClipboardIcon, X,
   FileText, Trash2, Users, RefreshCw, MinusCircle, Home,
   FolderOpen, ShieldCheck, Sliders, Clock, Eye, Save
 } from "lucide-react";
+import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
+import { Clipboard } from '@capacitor/clipboard';
+import { Capacitor } from '@capacitor/core';
 import Header from "./components/Header";
 import FolderExplorer from "./components/FolderExplorer";
 import UploadProgressModal from './components/UploadProgressModal';
@@ -113,8 +116,18 @@ export default function App() {
   const [uploadError, setUploadError] = useState('');
   const [receiptData, setReceiptData] = useState(null);
 
+  const [isPulling, setIsPulling] = useState(false);
+  const touchStartY = useRef(0);
+
   useEffect(() => {
     document.documentElement.classList.add('dark');
+    if (Capacitor.isNativePlatform()) {
+      GoogleAuth.initialize({
+        clientId: GOOGLE_CLIENT_ID,
+        scopes: ['profile', 'email', 'https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/drive.readonly', 'https://www.googleapis.com/auth/drive.appdata'],
+        grantOfflineAccess: true,
+      });
+    }
   }, []);
 
   useEffect(() => {
@@ -288,7 +301,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!initGoogleClient()) {
+    if (!Capacitor.isNativePlatform() && !initGoogleClient()) {
       const interval = setInterval(() => {
         if (initGoogleClient()) {
           clearInterval(interval);
@@ -298,20 +311,49 @@ export default function App() {
     }
   }, [initGoogleClient]);
 
-  const handleConnectDrive = () => {
-    if (tokenClientRef.current) {
-      tokenClientRef.current.requestAccessToken({ prompt: '' });
-    } else if (window.google?.accounts?.oauth2) {
-      if (initGoogleClient()) {
-        tokenClientRef.current.requestAccessToken({ prompt: '' });
+  const handleConnectDrive = async () => {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const googleUser = await GoogleAuth.signIn();
+        const token = googleUser.authentication?.accessToken || googleUser.authentication?.idToken;
+
+        if (token) {
+          setAccessToken(token);
+          localStorage.setItem('easysubmit_token', token);
+
+          const userData = {
+            name: googleUser.displayName || googleUser.givenName || 'Connected User',
+            email: googleUser.email || '',
+            picture: googleUser.imageUrl || ''
+          };
+          setUser(userData);
+          localStorage.setItem('easysubmit_user', JSON.stringify(userData));
+        }
+      } catch (err) {
+        console.error('Native Google Sign-In Error:', err);
+        alert('Google Sign-In failed or was canceled.');
       }
     } else {
-      alert('Google SDK is taking longer to load. Please check your network connection and try again.');
+      if (tokenClientRef.current) {
+        tokenClientRef.current.requestAccessToken({ prompt: '' });
+      } else if (window.google?.accounts?.oauth2) {
+        if (initGoogleClient()) {
+          tokenClientRef.current.requestAccessToken({ prompt: '' });
+        }
+      } else {
+        alert('Google SDK is taking longer to load. Please check your network connection and try again.');
+      }
     }
   };
 
   const handleSignOut = async () => {
-    if (accessToken) {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        await GoogleAuth.signOut();
+      } catch (e) {
+        console.warn(e);
+      }
+    } else if (accessToken) {
       await revokeGoogleToken(accessToken);
     }
     setUser(null);
@@ -460,11 +502,19 @@ export default function App() {
 
   const handlePaste = async () => {
     try {
-      const text = await navigator.clipboard.readText();
-      setDriveInput(text);
-      handleVerifyFolder(text);
+      if (Capacitor.isNativePlatform()) {
+        const { value } = await Clipboard.read();
+        if (value) {
+          setDriveInput(value);
+          handleVerifyFolder(value);
+        }
+      } else {
+        const text = await navigator.clipboard.readText();
+        setDriveInput(text);
+        handleVerifyFolder(text);
+      }
     } catch (err) {
-      alert('Clipboard permission required.');
+      alert('Cannot access clipboard. Please paste manually into the input box.');
     }
   };
 
@@ -475,6 +525,31 @@ export default function App() {
     setFolderContents([]);
     setBreadcrumbs([]);
     setIsAccessClosed(false);
+  };
+
+  const handleTouchStart = (e) => {
+    if (window.scrollY === 0) {
+      touchStartY.current = e.touches[0].clientY;
+    }
+  };
+
+  const handleTouchMove = (e) => {
+    if (window.scrollY === 0) {
+      const touchY = e.touches[0].clientY;
+      if (touchY - touchStartY.current > 80 && !isPulling) {
+        setIsPulling(true);
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (isPulling) {
+      const targetFolder = currentFolderId || activeFolderId;
+      if (targetFolder && accessToken) {
+        loadFolderItems(targetFolder);
+      }
+      setTimeout(() => setIsPulling(false), 800);
+    }
   };
 
   const categories = [
@@ -600,8 +675,22 @@ export default function App() {
     }
   };
 
+  const hasFormDraft = Boolean(fullName.trim() || section.trim() || subject.trim());
+
   return (
-    <div className="min-h-screen w-full bg-[#050814] text-white flex flex-col font-sans relative overflow-x-hidden select-none">
+    <div 
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      className="min-h-screen w-full bg-[#050814] text-white flex flex-col font-sans relative overflow-x-hidden select-none"
+    >
+      {isPulling && (
+        <div className="fixed top-2 left-1/2 -translate-x-1/2 z-50 bg-blue-600/90 text-white text-xs px-4 py-1.5 rounded-full flex items-center gap-2 shadow-lg animate-bounce">
+          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+          <span>Refreshing app & Drive contents...</span>
+        </div>
+      )}
+
       <div className="fixed -top-32 -left-32 w-96 h-96 bg-blue-600/25 rounded-full blur-[120px] pointer-events-none" />
       <div className="fixed top-1/2 right-0 w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-[140px] pointer-events-none" />
       <div className="fixed -bottom-40 left-1/3 w-96 h-96 bg-cyan-500/20 rounded-full blur-[130px] pointer-events-none" />
@@ -669,7 +758,7 @@ export default function App() {
                     <p className="text-[11px] text-slate-400">EasySubmit creates your personal folder using your info</p>
                   </div>
                 </div>
-                {(fullName || section || subject) && (
+                {hasFormDraft && (
                   <span className="text-[10px] text-cyan-400 font-bold flex items-center gap-1 bg-cyan-500/10 border border-cyan-500/20 px-2.5 py-1 rounded-full">
                     <Save className="w-3 h-3" /> Auto-Saved
                   </span>
@@ -906,7 +995,7 @@ export default function App() {
                   onClick={handlePaste}
                   className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg text-xs flex items-center gap-1 shadow-md transition active:scale-95"
                 >
-                  <Clipboard className="w-3 h-3" />
+                  <ClipboardIcon className="w-3 h-3" />
                   <span>Paste</span>
                 </button>
               </div>

@@ -18,9 +18,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
-
-const CURRENT_APP_VERSION = '1.0.0';
-const GITHUB_REPO = 'ArnelCoralde24/EasySubmit';
+import { checkForAppUpdates, downloadAndInstallApk, CURRENT_APP_VERSION } from '../services/updateService';
 
 export default function SettingsModal({
   isOpen,
@@ -52,53 +50,30 @@ export default function SettingsModal({
     setToastMessage('');
 
     try {
-      const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`);
+      const result = await checkForAppUpdates();
       
-      if (!response.ok) {
-        throw new Error('Release not found');
-      }
-
-      const data = await response.json();
-      const latestTag = data.tag_name ? data.tag_name.replace('v', '').trim() : '1.0.0';
-
-      const apkAsset = data.assets?.find(asset => asset.name.endsWith('.apk'));
-      const downloadUrl = apkAsset ? apkAsset.browser_download_url : data.html_url;
-
-      const hasNewVersion = isVersionNewer(CURRENT_APP_VERSION, latestTag);
-
-      if (hasNewVersion) {
+      if (result.error) {
+        setUpdateStatus('error');
+        if (isManual) setToastMessage(result.message);
+      } else if (result.hasUpdate) {
         setUpdateStatus('available');
         setUpdateData({
-          version: latestTag,
-          downloadUrl,
-          notes: data.body || 'New fixes and performance improvements available.'
+          version: result.latestVersion,
+          downloadUrl: result.downloadUrl,
+          notes: result.releaseNotes
         });
-        if (isManual) setToastMessage('🚀 New version available!');
+        if (isManual) setToastMessage(result.message);
       } else {
         setUpdateStatus('latest');
         setUpdateData({ version: CURRENT_APP_VERSION });
-        if (isManual) setToastMessage('✅ You are on the latest version!');
+        if (isManual) setToastMessage(result.message);
       }
     } catch (err) {
-      console.error(err);
       setUpdateStatus('error');
       if (isManual) setToastMessage('⚠️ Could not connect to update server.');
     } finally {
       setCheckingUpdate(false);
     }
-  };
-
-  const isVersionNewer = (current, latest) => {
-    const cParts = current.split('.').map(Number);
-    const lParts = latest.split('.').map(Number);
-
-    for (let i = 0; i < Math.max(cParts.length, lParts.length); i++) {
-      const c = cParts[i] || 0;
-      const l = lParts[i] || 0;
-      if (l > c) return true;
-      if (l < c) return false;
-    }
-    return false;
   };
 
   if (!isOpen) return null;
@@ -192,21 +167,20 @@ export default function SettingsModal({
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] font-bold text-amber-300 flex items-center gap-1.5">
                         <Sparkles className="w-3.5 h-3.5" />
-                        New Version Available: v{updateData.version}
+                        New Version Available: {updateData.version}
                       </span>
                     </div>
                     <p className="text-[10px] text-slate-300 leading-relaxed line-clamp-2">
                       {updateData.notes}
                     </p>
-                    <a
-                      href={updateData.downloadUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="w-full py-2 px-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-600/30 flex items-center justify-center gap-2 transition active:scale-98"
+                    <button
+                      type="button"
+                      onClick={() => downloadAndInstallApk(updateData.downloadUrl)}
+                      className="w-full py-2 px-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-600/30 flex items-center justify-center gap-2 transition active:scale-98 cursor-pointer"
                     >
                       <Download className="w-3.5 h-3.5" />
-                      <span>Download & Update APK</span>
-                    </a>
+                      <span>Download & Install {updateData.version}</span>
+                    </button>
                   </div>
                 )}
 
@@ -438,7 +412,7 @@ export default function SettingsModal({
           <button
             type="button"
             onClick={onClose}
-            className="w-full py-3 bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-bold rounded-2xl text-xs shadow-lg shadow-blue-600/30 transition active:scale-95"
+            className="w-full py-3 bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-bold rounded-2xl text-xs shadow-lg shadow-blue-600/30 transition active:scale-95 cursor-pointer"
           >
             Done
           </button>
