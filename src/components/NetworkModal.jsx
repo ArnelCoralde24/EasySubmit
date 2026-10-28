@@ -1,61 +1,59 @@
 import React, { useState, useEffect } from 'react';
-import { Network } from '@capacitor/network';
+import { Capacitor } from '@capacitor/core';
 import { WifiOff, RotateCw, X } from 'lucide-react';
 
 export const NetworkModal = () => {
   const [isOffline, setIsOffline] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
 
-  const verifyActualConnection = async () => {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 4000);
-      
-      const response = await fetch('https://clients3.google.com/generate_204', {
-        method: 'HEAD',
-        cache: 'no-store',
-        signal: controller.signal
-      });
-      
-      clearTimeout(timeoutId);
-      return response.status === 204 || response.ok;
-    } catch {
-      return false;
-    }
-  };
+  const checkConnection = async () => {
+    if (!Capacitor.isNativePlatform()) return;
 
-  const checkConnectionStatus = async () => {
     setIsChecking(true);
-    const status = await Network.getStatus();
-
-    if (!status.connected) {
+    
+    if (!navigator.onLine) {
       setIsOffline(true);
       setIsChecking(false);
       return;
     }
 
-    const hasInternet = await verifyActualConnection();
-    setIsOffline(!hasInternet);
-    setIsChecking(false);
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      
+      await fetch('https://clients3.google.com/generate_204', {
+        method: 'HEAD',
+        mode: 'no-cors',
+        cache: 'no-store',
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      setIsOffline(false);
+    } catch {
+      setIsOffline(true);
+    } finally {
+      setIsChecking(false);
+    }
   };
 
   useEffect(() => {
-    checkConnectionStatus();
+    if (!Capacitor.isNativePlatform()) return;
 
-    const networkListener = Network.addListener('networkStatusChange', (status) => {
-      if (!status.connected) {
-        setIsOffline(true);
-      } else {
-        checkConnectionStatus();
-      }
-    });
+    checkConnection();
+
+    const handleOnline = () => checkConnection();
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
 
     return () => {
-      networkListener.then(handler => handler.remove());
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
     };
   }, []);
 
-  if (!isOffline) return null;
+  if (!Capacitor.isNativePlatform() || !isOffline) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md transition-all duration-300">
@@ -88,7 +86,7 @@ export const NetworkModal = () => {
         </p>
 
         <button
-          onClick={checkConnectionStatus}
+          onClick={checkConnection}
           disabled={isChecking}
           className="w-full py-3.5 px-6 rounded-2xl font-medium text-white text-base flex items-center justify-center gap-2 transition-all duration-200 bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-500 hover:brightness-110 active:scale-[0.98] shadow-lg shadow-cyan-500/25 border border-cyan-300/40 disabled:opacity-60"
         >
