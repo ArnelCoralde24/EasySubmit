@@ -15,6 +15,7 @@ import SettingsModal from './components/SettingsModal';
 import HistoryModal from './components/HistoryModal';
 import PrivacyModal from './components/PrivacyModal';
 import FilePreviewModal from './components/FilePreviewModal';
+import { NetworkModal } from './components/NetworkModal';
 import { initGoogleAuth, signInWithGoogle, signOutGoogle } from './services/googleAuth';
 import { 
   extractFolderId, 
@@ -131,6 +132,24 @@ export default function App() {
     localStorage.setItem('easysubmit_draft_drive_input', driveInput);
   }, [fullName, section, subject, driveInput]);
 
+  const loadFolderItems = useCallback(async (targetId, silent = false) => {
+    if (!accessToken || !targetId) return;
+    if (!silent) setIsLoadingContents(true);
+    try {
+      const result = await fetchFolderContents(targetId, accessToken);
+      setFolderContents(result.files || []);
+      setIsAccessClosed(result.isClosed);
+    } catch (err) {
+      if (err?.status === 401 || err?.message?.includes('401')) {
+        setAccessToken(null);
+        localStorage.removeItem('easysubmit_token');
+      }
+      setIsAccessClosed(false);
+    } finally {
+      if (!silent) setIsLoadingContents(false);
+    }
+  }, [accessToken]);
+
   const handleVerifyFolder = useCallback((folderLinkOrId) => {
     if (!folderLinkOrId) return;
     if (folderLinkOrId.includes('http') && !folderLinkOrId.includes('drive.google.com')) {
@@ -144,13 +163,23 @@ export default function App() {
     setCurrentFolderId(id);
     setBreadcrumbs([{ id, name: 'Root Folder' }]);
     setIsAccessClosed(false);
-  }, []);
+    if (accessToken) {
+      loadFolderItems(id);
+    }
+  }, [accessToken, loadFolderItems]);
 
   useEffect(() => {
-    if (driveInput && !activeFolderId) {
-      handleVerifyFolder(driveInput);
+    if (driveInput && accessToken) {
+      const id = extractFolderId(driveInput);
+      if (id) {
+        setActiveFolderId(id);
+        setCurrentFolderId(id);
+        setBreadcrumbs([{ id, name: 'Root Folder' }]);
+        setIsAccessClosed(false);
+        loadFolderItems(id);
+      }
     }
-  }, [driveInput, activeFolderId, handleVerifyFolder]);
+  }, [driveInput, accessToken, loadFolderItems]);
 
   useEffect(() => {
     if (isHelpOpen || receiptData || isUploading || isSettingsOpen || isHistoryOpen || isPrivacyOpen || previewFile) {
@@ -348,28 +377,10 @@ export default function App() {
     localStorage.removeItem('easysubmit_user');
   };
 
-  const loadFolderItems = useCallback(async (targetId, silent = false) => {
-    if (!accessToken || !targetId) return;
-    if (!silent) setIsLoadingContents(true);
-    try {
-      const result = await fetchFolderContents(targetId, accessToken);
-      setFolderContents(result.files || []);
-      setIsAccessClosed(result.isClosed);
-    } catch (err) {
-      if (err?.status === 401 || err?.message?.includes('401')) {
-        setAccessToken(null);
-        localStorage.removeItem('easysubmit_token');
-      }
-      setIsAccessClosed(false);
-    } finally {
-      if (!silent) setIsLoadingContents(false);
-    }
-  }, [accessToken]);
-
   useEffect(() => {
     const targetFolder = currentFolderId || activeFolderId;
     if (targetFolder && accessToken) {
-      loadFolderItems(targetFolder);
+      loadFolderItems(targetFolder, true);
       const interval = setInterval(() => {
         loadFolderItems(targetFolder, true);
       }, 8000);
@@ -669,6 +680,8 @@ export default function App() {
       onTouchEnd={handleTouchEnd}
       className="min-h-screen w-full bg-[#050814] text-white flex flex-col font-sans relative overflow-x-hidden select-none"
     >
+      <NetworkModal />
+
       {isPulling && (
         <div className="fixed top-2 left-1/2 -translate-x-1/2 z-50 bg-blue-600/90 text-white text-xs px-4 py-1.5 rounded-full flex items-center gap-2 shadow-lg animate-bounce">
           <RefreshCw className="w-3.5 h-3.5 animate-spin" />

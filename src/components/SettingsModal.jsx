@@ -15,7 +15,8 @@ import {
   RefreshCw,
   Download,
   CheckCircle2,
-  Sparkles
+  Sparkles,
+  Loader2
 } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { checkForAppUpdates, downloadAndInstallApk, CURRENT_APP_VERSION } from '../services/updateService';
@@ -36,6 +37,7 @@ export default function SettingsModal({
   const [updateStatus, setUpdateStatus] = useState(null);
   const [updateData, setUpdateData] = useState(null);
   const [toastMessage, setToastMessage] = useState('');
+  const [downloadState, setDownloadState] = useState('idle');
 
   const isAndroidNative = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
 
@@ -74,6 +76,14 @@ export default function SettingsModal({
     } finally {
       setCheckingUpdate(false);
     }
+  };
+
+  const handleStartDownload = async () => {
+    if (!updateData?.downloadUrl) return;
+    setDownloadState('downloading');
+    await downloadAndInstallApk(updateData.downloadUrl, (status) => {
+      setDownloadState(status);
+    });
   };
 
   if (!isOpen) return null;
@@ -153,7 +163,7 @@ export default function SettingsModal({
 
                   <button
                     type="button"
-                    disabled={checkingUpdate}
+                    disabled={checkingUpdate || downloadState !== 'idle'}
                     onClick={() => handleCheckForUpdates(true)}
                     className="p-2 bg-white/5 hover:bg-white/10 active:scale-95 border border-white/10 rounded-xl text-slate-300 hover:text-white transition flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
                   >
@@ -175,11 +185,26 @@ export default function SettingsModal({
                     </p>
                     <button
                       type="button"
-                      onClick={() => downloadAndInstallApk(updateData.downloadUrl)}
-                      className="w-full py-2 px-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-600/30 flex items-center justify-center gap-2 transition active:scale-98 cursor-pointer"
+                      disabled={downloadState !== 'idle'}
+                      onClick={handleStartDownload}
+                      className="w-full py-2 px-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 disabled:opacity-75 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-600/30 flex items-center justify-center gap-2 transition active:scale-98 cursor-pointer"
                     >
-                      <Download className="w-3.5 h-3.5" />
-                      <span>Download & Install {updateData.version}</span>
+                      {downloadState === 'downloading' ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                          <span>Downloading APK Update...</span>
+                        </>
+                      ) : downloadState === 'installing' ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                          <span>Opening Installer...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Download className="w-3.5 h-3.5" />
+                          <span>Download & Install {updateData.version}</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 )}
