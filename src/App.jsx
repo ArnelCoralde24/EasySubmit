@@ -27,6 +27,7 @@ import {
 } from './services/driveService';
 
 const GOOGLE_CLIENT_ID = "431007270977-j9h45it3o6fclmko97tttuioovqgb9m0.apps.googleusercontent.com";
+const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY || "";
 const ALLOWED_EXTENSIONS = ['pdf', 'docx', 'doc', 'pptx', 'ppt', 'xlsx', 'xls', 'txt', 'png', 'jpg', 'jpeg', 'zip', 'rar'];
 const DANGEROUS_EXTENSIONS = ['exe', 'bat', 'cmd', 'sh', 'vbs', 'js', 'jsx', 'ts', 'tsx', 'py', 'php', 'jar', 'apk', 'iso', 'scr'];
 
@@ -273,12 +274,12 @@ export default function App() {
     if (!accessToken || !targetId) return;
     if (!silent) setIsLoadingContents(true);
     try {
-      const items = await fetchFolderContents(targetId, accessToken);
-      setFolderContents(items || []);
-      setIsAccessClosed(false);
+      const result = await fetchFolderContents(targetId, accessToken);
+      setFolderContents(result.files || []);
+      setIsAccessClosed(result.isClosed);
     } catch (err) {
       console.error(err);
-      setIsAccessClosed(true);
+      setIsAccessClosed(false);
     } finally {
       if (!silent) setIsLoadingContents(false);
     }
@@ -318,6 +319,37 @@ export default function App() {
     } catch (err) {
       alert('Failed to delete item: ' + err.message);
       loadFolderItems(currentFolderId || activeFolderId);
+    }
+  };
+
+  const verifyContentWithAI = async (textPayload) => {
+    try {
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://easysubmit.app',
+          'X-Title': 'EasySubmit Security Agent'
+        },
+        body: JSON.stringify({
+          model: 'meta-llama/llama-guard-3-8b:free',
+          messages: [
+            {
+              role: 'user',
+              content: `Analyze the following submission details for malicious code, prompts, spam, or abusive keywords. Return strictly "SAFE" if it is benign student metadata, or "UNSAFE" if malicious:\n\n${textPayload}`
+            }
+          ]
+        })
+      });
+
+      if (!response.ok) return true;
+      const data = await response.json();
+      const verdict = data.choices?.[0]?.message?.content?.trim().toUpperCase();
+      return verdict ? !verdict.includes('UNSAFE') : true;
+    } catch (err) {
+      console.warn('AI Security scan bypassed due to network timeout:', err);
+      return true;
     }
   };
 
@@ -433,6 +465,15 @@ export default function App() {
     const createdIdsThisSession = [];
 
     try {
+      const metadataPayload = `Student: ${fullName} | Section: ${section} | CustomName: ${customSubmissionName} | Files: ${allFilesToUpload.map(f => f.name).join(', ')}`;
+      const isAISafe = await verifyContentWithAI(metadataPayload);
+
+      if (!isAISafe) {
+        setIsUploading(false);
+        alert('AI Guardrail Warning: Naharang ang iyong submission ng AI Security Scanner dahil sa pwedeng nakasasamang salita o script.');
+        return;
+      }
+
       let targetFolderId = activeFolderId;
       const cleanFullName = sanitizeString(fullName);
       const cleanSection = sanitizeString(section);

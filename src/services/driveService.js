@@ -67,7 +67,7 @@ export const extractFolderId = (urlOrId) => {
 };
 
 export const fetchFolderContents = async (folderId, accessToken) => {
-  if (!folderId || !accessToken) return [];
+  if (!folderId || !accessToken) return { files: [], isClosed: false };
 
   try {
     const query = encodeURIComponent(`'${folderId}' in parents and trashed = false`);
@@ -83,15 +83,17 @@ export const fetchFolderContents = async (folderId, accessToken) => {
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error?.message || 'Failed to fetch folder contents');
+      if (response.status === 403 || response.status === 404) {
+        return { files: [], isClosed: true };
+      }
+      return { files: [], isClosed: false };
     }
 
     const data = await response.json();
-    return data.files || [];
+    return { files: data.files || [], isClosed: false };
   } catch (error) {
     console.error('Error fetching folder contents:', error);
-    throw error;
+    return { files: [], isClosed: false };
   }
 };
 

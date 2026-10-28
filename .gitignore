@@ -7,22 +7,51 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Build and Dependencies
-node_modules
-dist
-dist-ssr
-*.local
+# Diagnostic reports (https://nodejs.org/api/report.html)
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Build & Output Directories
+node_modules/
+dist/
+dist-ssr/
+build/
+.output/
+
+# Environment Variables & Secrets (CRITICAL)
 .env
-.wrangler
+.env.*
+!.env.example
+
+# Cloudflare Wrangler & Serverless
+.wrangler/
 dist/wrangler.json
 
-# Editor directories and files
+# Editor & OS files
 .vscode/*
 !.vscode/extensions.json
-.idea
-.DS_Store
+!.vscode/settings.json
+.idea/
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+
+# Testing & Coverage
+coverage/
+.nyc_output/
+
+# Cache & Temporary
+.cache/
+.vite/
+.eslintcache
