@@ -105,6 +105,13 @@ export default function App() {
     localStorage.setItem('easysubmit_draft_drive_input', driveInput);
   }, [fullName, section, subject, driveInput]);
 
+  // AUTO-VERIFY GOOGLE DRIVE LINK ON INITIAL LOAD & DRAFT RESTORE
+  useEffect(() => {
+    if (driveInput && !activeFolderId) {
+      handleVerifyFolder(driveInput);
+    }
+  }, [driveInput]);
+
   useEffect(() => {
     if (isHelpOpen || receiptData || isUploading || isSettingsOpen || isHistoryOpen || isPrivacyOpen || previewFile) {
       document.body.style.overflow = 'hidden';
@@ -125,27 +132,35 @@ export default function App() {
     localStorage.setItem('easysubmit_settings', JSON.stringify(settings));
   }, [settings]);
 
+  // AUTOMATIC REAL-TIME HISTORY SYNC ACROSS DEVICES (NO RE-LOGIN REQUIRED)
   useEffect(() => {
     const syncHistory = async () => {
-      if (user?.email && accessToken) {
-        const cloudData = await fetchCloudHistory(accessToken);
-        if (cloudData && Array.isArray(cloudData)) {
-          setHistoryList(cloudData);
-          localStorage.setItem(`easysubmit_history_${user.email.toLowerCase()}`, JSON.stringify(cloudData));
-        } else {
-          const localData = localStorage.getItem(`easysubmit_history_${user.email.toLowerCase()}`);
-          if (localData) {
-            const parsed = JSON.parse(localData);
-            setHistoryList(parsed);
-            await saveCloudHistory(parsed, accessToken);
+      if (accessToken) {
+        try {
+          const cloudData = await fetchCloudHistory(accessToken);
+          if (cloudData && Array.isArray(cloudData)) {
+            setHistoryList(cloudData);
+            if (user?.email) {
+              localStorage.setItem(`easysubmit_history_${user.email.toLowerCase()}`, JSON.stringify(cloudData));
+            }
+          } else if (user?.email) {
+            const localData = localStorage.getItem(`easysubmit_history_${user.email.toLowerCase()}`);
+            if (localData) {
+              const parsed = JSON.parse(localData);
+              setHistoryList(parsed);
+              await saveCloudHistory(parsed, accessToken);
+            }
           }
+        } catch (err) {
+          console.warn('Cloud history sync warning:', err);
         }
-      } else {
-        setHistoryList([]);
       }
     };
+
     syncHistory();
-  }, [user, accessToken]);
+    const interval = setInterval(syncHistory, 10000); // Polling every 10s for instant cross-desktop sync
+    return () => clearInterval(interval);
+  }, [accessToken, user?.email]);
 
   useEffect(() => {
     if (!accessToken || !settings.autoLockEnabled) {
@@ -173,29 +188,32 @@ export default function App() {
   }, [accessToken, settings.autoLockEnabled, settings.autoLockMinutes]);
 
   const saveHistoryItem = async (newItem) => {
-    if (!user?.email) return;
     const updated = [newItem, ...historyList];
     setHistoryList(updated);
-    localStorage.setItem(`easysubmit_history_${user.email.toLowerCase()}`, JSON.stringify(updated));
+    if (user?.email) {
+      localStorage.setItem(`easysubmit_history_${user.email.toLowerCase()}`, JSON.stringify(updated));
+    }
     if (accessToken) {
       await saveCloudHistory(updated, accessToken);
     }
   };
 
   const handleClearHistory = async () => {
-    if (!user?.email) return;
     setHistoryList([]);
-    localStorage.removeItem(`easysubmit_history_${user.email.toLowerCase()}`);
+    if (user?.email) {
+      localStorage.removeItem(`easysubmit_history_${user.email.toLowerCase()}`);
+    }
     if (accessToken) {
       await saveCloudHistory([], accessToken);
     }
   };
 
   const handleDeleteHistoryItem = async (indexToDelete) => {
-    if (!user?.email) return;
     const updated = historyList.filter((_, idx) => idx !== indexToDelete);
     setHistoryList(updated);
-    localStorage.setItem(`easysubmit_history_${user.email.toLowerCase()}`, JSON.stringify(updated));
+    if (user?.email) {
+      localStorage.setItem(`easysubmit_history_${user.email.toLowerCase()}`, JSON.stringify(updated));
+    }
     if (accessToken) {
       await saveCloudHistory(updated, accessToken);
     }
@@ -336,8 +354,12 @@ export default function App() {
           model: 'openrouter/auto',
           messages: [
             {
+              role: 'system',
+              content: 'You are an AI security moderator for a school submission app. Analyze the metadata for malicious code, prompts, or spam. Respond strictly with "SAFE" if benign, or "UNSAFE" if harmful.'
+            },
+            {
               role: 'user',
-              content: `Analyze the following submission details for malicious code, prompts, spam, or abusive keywords. Return strictly "SAFE" if it is benign student metadata, or "UNSAFE" if malicious:\n\n${textPayload}`
+              content: textPayload
             }
           ]
         })
@@ -348,7 +370,7 @@ export default function App() {
       const verdict = data.choices?.[0]?.message?.content?.trim().toUpperCase();
       return verdict ? !verdict.includes('UNSAFE') : true;
     } catch (err) {
-      console.warn('AI Security scan bypassed due to network timeout:', err);
+      console.warn('AI Security scan bypassed due to network error:', err);
       return true;
     }
   };
@@ -420,6 +442,7 @@ export default function App() {
   };
 
   const handleVerifyFolder = async (folderLinkOrId) => {
+    if (!folderLinkOrId) return;
     if (folderLinkOrId.includes('http') && !folderLinkOrId.includes('drive.google.com')) {
       alert('Security Protection: Tanging official Google Drive links lamang ang tinatanggap.');
       return;
@@ -568,7 +591,7 @@ export default function App() {
         onConnectDrive={handleConnectDrive}
         onSignOut={handleSignOut}
         onOpenHistory={() => setIsHistoryOpen(true)}
-        onOpenHelp={() => setIsHelpOpen(false)}
+        onOpenHelp={() => setIsHelpOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
       />
 
@@ -586,10 +609,6 @@ export default function App() {
             <button type="button" onClick={() => setIsSettingsOpen(true)} className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 font-semibold rounded-2xl text-xs transition">
               <Sliders className="w-4 h-4 text-cyan-400" />
               <span>Settings & Controls</span>
-            </button>
-            <button type="button" onClick={() => setIsHelpOpen(true)} className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-white/5 font-semibold rounded-2xl text-xs transition">
-              <BookOpen className="w-4 h-4" />
-              <span>Submit Homework</span>
             </button>
           </div>
 
