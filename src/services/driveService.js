@@ -91,7 +91,7 @@ export const fetchFolderContents = async (folderId, accessToken) => {
     return data.files || [];
   } catch (error) {
     console.error('Error fetching folder contents:', error);
-    return [];
+    throw error;
   }
 };
 
@@ -196,5 +196,77 @@ export const revokeGoogleToken = async (accessToken) => {
     });
   } catch (err) {
     console.error('Error revoking token:', err);
+  }
+};
+
+export const fetchCloudHistory = async (accessToken) => {
+  if (!accessToken) return null;
+  try {
+    const query = encodeURIComponent("name = 'easysubmit_history.json' and trashed = false");
+    const fields = encodeURIComponent('files(id, name)');
+    const searchUrl = `${DRIVE_API_BASE}/files?q=${query}&fields=${fields}&supportsAllDrives=true`;
+
+    const res = await fetch(searchUrl, {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    if (!res.ok) return null;
+
+    const data = await res.json();
+    if (data.files && data.files.length > 0) {
+      const fileId = data.files[0].id;
+      const contentRes = await fetch(`${DRIVE_API_BASE}/files/${fileId}?alt=media`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      if (contentRes.ok) {
+        return await contentRes.json();
+      }
+    }
+  } catch (err) {
+    console.error('Error fetching cloud history:', err);
+  }
+  return null;
+};
+
+export const saveCloudHistory = async (historyList, accessToken) => {
+  if (!accessToken) return;
+  try {
+    const query = encodeURIComponent("name = 'easysubmit_history.json' and trashed = false");
+    const searchUrl = `${DRIVE_API_BASE}/files?q=${query}&fields=files(id)&supportsAllDrives=true`;
+
+    const res = await fetch(searchUrl, {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    const data = await res.json();
+
+    const fileContent = JSON.stringify(historyList, null, 2);
+
+    if (data.files && data.files.length > 0) {
+      const fileId = data.files[0].id;
+      await fetch(`${UPLOAD_API_BASE}/files/${fileId}?uploadType=media&supportsAllDrives=true`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: fileContent
+      });
+    } else {
+      const metadata = {
+        name: 'easysubmit_history.json',
+        mimeType: 'application/json'
+      };
+
+      const formData = new FormData();
+      formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+      formData.append('file', new Blob([fileContent], { type: 'application/json' }));
+
+      await fetch(`${UPLOAD_API_BASE}/files?uploadType=multipart&supportsAllDrives=true`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}` },
+        body: formData
+      });
+    }
+  } catch (err) {
+    console.error('Error saving cloud history:', err);
   }
 };

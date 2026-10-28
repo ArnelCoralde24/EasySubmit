@@ -21,7 +21,9 @@ import {
   deleteDriveItem,
   verifyFileMagicBytes,
   revokeGoogleToken,
-  sanitizeString
+  sanitizeString,
+  fetchCloudHistory,
+  saveCloudHistory
 } from './services/driveService';
 
 const GOOGLE_CLIENT_ID = "431007270977-j9h45it3o6fclmko97tttuioovqgb9m0.apps.googleusercontent.com";
@@ -123,13 +125,26 @@ export default function App() {
   }, [settings]);
 
   useEffect(() => {
-    if (user?.email) {
-      const savedHistory = localStorage.getItem(`easysubmit_history_${user.email.toLowerCase()}`);
-      setHistoryList(savedHistory ? JSON.parse(savedHistory) : []);
-    } else {
-      setHistoryList([]);
-    }
-  }, [user]);
+    const syncHistory = async () => {
+      if (user?.email && accessToken) {
+        const cloudData = await fetchCloudHistory(accessToken);
+        if (cloudData && Array.isArray(cloudData)) {
+          setHistoryList(cloudData);
+          localStorage.setItem(`easysubmit_history_${user.email.toLowerCase()}`, JSON.stringify(cloudData));
+        } else {
+          const localData = localStorage.getItem(`easysubmit_history_${user.email.toLowerCase()}`);
+          if (localData) {
+            const parsed = JSON.parse(localData);
+            setHistoryList(parsed);
+            await saveCloudHistory(parsed, accessToken);
+          }
+        }
+      } else {
+        setHistoryList([]);
+      }
+    };
+    syncHistory();
+  }, [user, accessToken]);
 
   useEffect(() => {
     if (!accessToken || !settings.autoLockEnabled) {
@@ -156,28 +171,33 @@ export default function App() {
     };
   }, [accessToken, settings.autoLockEnabled, settings.autoLockMinutes]);
 
-  const saveHistoryItem = (newItem) => {
+  const saveHistoryItem = async (newItem) => {
     if (!user?.email) return;
-    setHistoryList((prev) => {
-      const updated = [newItem, ...prev];
-      localStorage.setItem(`easysubmit_history_${user.email.toLowerCase()}`, JSON.stringify(updated));
-      return updated;
-    });
+    const updated = [newItem, ...historyList];
+    setHistoryList(updated);
+    localStorage.setItem(`easysubmit_history_${user.email.toLowerCase()}`, JSON.stringify(updated));
+    if (accessToken) {
+      await saveCloudHistory(updated, accessToken);
+    }
   };
 
-  const handleClearHistory = () => {
+  const handleClearHistory = async () => {
     if (!user?.email) return;
     setHistoryList([]);
     localStorage.removeItem(`easysubmit_history_${user.email.toLowerCase()}`);
+    if (accessToken) {
+      await saveCloudHistory([], accessToken);
+    }
   };
 
-  const handleDeleteHistoryItem = (indexToDelete) => {
+  const handleDeleteHistoryItem = async (indexToDelete) => {
     if (!user?.email) return;
-    setHistoryList((prev) => {
-      const updated = prev.filter((_, idx) => idx !== indexToDelete);
-      localStorage.setItem(`easysubmit_history_${user.email.toLowerCase()}`, JSON.stringify(updated));
-      return updated;
-    });
+    const updated = historyList.filter((_, idx) => idx !== indexToDelete);
+    setHistoryList(updated);
+    localStorage.setItem(`easysubmit_history_${user.email.toLowerCase()}`, JSON.stringify(updated));
+    if (accessToken) {
+      await saveCloudHistory(updated, accessToken);
+    }
   };
 
   const initGoogleClient = () => {
@@ -478,7 +498,7 @@ export default function App() {
       };
 
       setReceiptData(newReceipt);
-      saveHistoryItem(newReceipt);
+      await saveHistoryItem(newReceipt);
 
       setFiles([]);
       localStorage.removeItem('easysubmit_draft_name');
