@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">googleapis.com</domain>
+        <domain includeSubdomains="true">skyvault.workers.dev</domain>
+        <pin-set expiration="2027-12-31">
+            <pin digest="SHA-256">7HIpAxy2WK32VqA1pA18i5u45B1c=</pin>
+        </pin-set>
+    </domain-config>
+</network-security-config>

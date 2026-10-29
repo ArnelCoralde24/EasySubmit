@@ -16,7 +16,9 @@ import {
   Download,
   CheckCircle2,
   Sparkles,
-  Loader2
+  Loader2,
+  Fingerprint,
+  DownloadCloud
 } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { checkForAppUpdates, downloadAndInstallApk, CURRENT_APP_VERSION } from '../services/updateService';
@@ -224,6 +226,52 @@ export default function SettingsModal({
                     {toastMessage}
                   </p>
                 )}
+              </div>
+            )}
+
+            {isAndroidNative && (
+              <div className="flex items-center justify-between p-3.5 sm:p-4 bg-slate-950/60 border border-white/10 rounded-2xl hover:border-cyan-500/30 transition">
+                <div className="space-y-0.5 pr-4">
+                  <div className="flex items-center gap-2 font-bold text-slate-200">
+                    <DownloadCloud className="w-4 h-4 text-cyan-400" />
+                    <span>In-App Auto-Update Silent Installer</span>
+                  </div>
+                  <p className="text-[10px] sm:text-[11px] text-slate-400">
+                    Automatically triggers silent background installer when a new update is detected.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onToggleSetting('autoUpdateSilent')}
+                  className={`w-11 sm:w-12 h-6 flex items-center rounded-full p-1 transition-colors duration-300 cursor-pointer flex-shrink-0 ${
+                    settings?.autoUpdateSilent ? 'bg-cyan-500 justify-end shadow-[0_0_15px_rgba(34,211,238,0.5)]' : 'bg-slate-700 justify-start'
+                  }`}
+                >
+                  <div className="w-4 h-4 rounded-full bg-white shadow-md" />
+                </button>
+              </div>
+            )}
+
+            {isAndroidNative && (
+              <div className="flex items-center justify-between p-3.5 sm:p-4 bg-slate-950/60 border border-white/10 rounded-2xl hover:border-cyan-500/30 transition">
+                <div className="space-y-0.5 pr-4">
+                  <div className="flex items-center gap-2 font-bold text-slate-200">
+                    <Fingerprint className="w-4 h-4 text-emerald-400" />
+                    <span>Biometric App Lock (Fingerprint / Face ID)</span>
+                  </div>
+                  <p className="text-[10px] sm:text-[11px] text-slate-400">
+                    Requires biometric verification before opening the application session.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onToggleSetting('biometricLock')}
+                  className={`w-11 sm:w-12 h-6 flex items-center rounded-full p-1 transition-colors duration-300 cursor-pointer flex-shrink-0 ${
+                    settings?.biometricLock ? 'bg-cyan-500 justify-end shadow-[0_0_15px_rgba(34,211,238,0.5)]' : 'bg-slate-700 justify-start'
+                  }`}
+                >
+                  <div className="w-4 h-4 rounded-full bg-white shadow-md" />
+                </button>
               </div>
             )}
 

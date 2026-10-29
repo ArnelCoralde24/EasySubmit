@@ -1,7 +1,8 @@
 import { Capacitor, CapacitorHttp } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
 import pkg from '../../package.json';
 
-export const CURRENT_APP_VERSION = pkg.version || "1.0.8";
+export const CURRENT_APP_VERSION = pkg.version || "1.1.3";
 const GITHUB_OWNER = "ArnelCoralde24";
 const GITHUB_REPO = "EasySubmit";
 
@@ -98,25 +99,16 @@ export const downloadAndInstallApk = async (downloadUrl, onStatusChange) => {
     isDownloadInProgress = true;
     if (onStatusChange) onStatusChange('downloading');
 
-    const response = await fetch(targetUrl);
-    if (!response.ok) throw new Error("Download request failed");
-
-    const blob = await response.blob();
-    const blobUrl = window.URL.createObjectURL(blob);
-
-    const a = document.createElement('a');
-    a.style.display = 'none';
-    a.href = blobUrl;
-    a.download = 'EasySubmit.apk';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    if (Capacitor.isNativePlatform()) {
+      await Browser.open({ url: targetUrl });
+    } else {
+      window.open(targetUrl, '_blank');
+    }
 
     setTimeout(() => {
-      window.URL.revokeObjectURL(blobUrl);
       isDownloadInProgress = false;
       if (onStatusChange) onStatusChange('idle');
-    }, 1000);
+    }, 2000);
 
   } catch (error) {
     console.error('Download error:', error);

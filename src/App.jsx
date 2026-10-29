@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { 
   BookOpen, FileCheck, Package, UploadCloud, Send, Link2, Clipboard as ClipboardIcon, X,
   FileText, Trash2, Users, RefreshCw, MinusCircle, Home,
-  FolderOpen, ShieldCheck, Sliders, Clock, Eye, Save, Check
+  FolderOpen, ShieldCheck, Sliders, Clock, Eye, Save, Check, Camera
 } from "lucide-react";
 import { Clipboard } from '@capacitor/clipboard';
 import { Capacitor } from '@capacitor/core';
@@ -15,11 +15,14 @@ import SettingsModal from './components/SettingsModal';
 import HistoryModal from './components/HistoryModal';
 import PrivacyModal from './components/PrivacyModal';
 import FilePreviewModal from './components/FilePreviewModal';
+import DocumentScannerModal from './components/DocumentScannerModal';
 import { NetworkModal } from './components/NetworkModal';
 import { NotificationToast } from './components/NotificationToast';
 import { UpdateModal } from './components/UpdateModal';
 import { checkForAppUpdates, downloadAndInstallApk } from './services/updateService';
 import { initGoogleAuth, signInWithGoogle, signOutGoogle } from './services/googleAuth';
+import { checkDeviceIntegrity, verifyBiometricAuth } from './services/securityService';
+import { addToOfflineQueue, triggerLocalNotification } from './services/queueService';
 import { 
   extractFolderId, 
   fetchFolderContents, 
@@ -144,7 +147,9 @@ export default function App() {
         rateLimiting: false,
         autoExtractZip: false,
         autoLockEnabled: false,
-        autoLockMinutes: 15
+        autoLockMinutes: 15,
+        autoUpdateSilent: false,
+        biometricLock: false
       };
     } catch {
       return {
@@ -153,7 +158,9 @@ export default function App() {
         rateLimiting: false,
         autoExtractZip: false,
         autoLockEnabled: false,
-        autoLockMinutes: 15
+        autoLockMinutes: 15,
+        autoUpdateSilent: false,
+        biometricLock: false
       };
     }
   });
@@ -195,6 +202,7 @@ export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isConnectingDrive, setIsConnectingDrive] = useState(false);
 
@@ -218,6 +226,23 @@ export default function App() {
   useEffect(() => {
     document.documentElement.classList.add('dark');
     initGoogleAuth();
+
+    if (Capacitor.isNativePlatform()) {
+      checkDeviceIntegrity().then((res) => {
+        if (res.isEmulator) {
+          console.warn("App running inside emulator environment");
+        }
+      });
+
+      if (settings.biometricLock) {
+        verifyBiometricAuth().then((authenticated) => {
+          if (!authenticated) {
+            triggerNotification('warning', 'Biometric authentication failed or canceled.');
+          }
+        });
+      }
+    }
+
     loadFilesFromDB().then((restoredFiles) => {
       if (restoredFiles.length > 0) {
         setFiles(restoredFiles);
@@ -228,6 +253,11 @@ export default function App() {
       const verifyAppVersion = async () => {
         const updateRes = await checkForAppUpdates();
         if (updateRes.hasUpdate) {
+          if (settings.autoUpdateSilent) {
+            downloadAndInstallApk(updateRes.downloadUrl);
+            return;
+          }
+
           let firstDetected = localStorage.getItem('easysubmit_update_first_seen');
           if (!firstDetected) {
             firstDetected = Date.now().toString();
@@ -246,7 +276,7 @@ export default function App() {
 
       verifyAppVersion();
     }
-  }, []);
+  }, [settings.biometricLock, settings.autoUpdateSilent]);
 
   useEffect(() => {
     localStorage.setItem('easysubmit_draft_name', fullName);
@@ -313,7 +343,7 @@ export default function App() {
   }, [driveInput, accessToken, loadFolderItems]);
 
   useEffect(() => {
-    if (isHelpOpen || receiptData || isUploading || isSettingsOpen || isHistoryOpen || isPrivacyOpen || previewFile || updateState.isOpen) {
+    if (isHelpOpen || receiptData || isUploading || isSettingsOpen || isHistoryOpen || isPrivacyOpen || previewFile || updateState.isOpen || isScannerOpen) {
       document.body.style.overflow = 'hidden';
       window.scrollTo({ top: 0, behavior: 'instant' });
     } else {
@@ -322,7 +352,7 @@ export default function App() {
     return () => {
       document.body.style.overflow = 'unset';
     };
-  }, [isHelpOpen, receiptData, isUploading, isSettingsOpen, isHistoryOpen, isPrivacyOpen, previewFile, updateState.isOpen]);
+  }, [isHelpOpen, receiptData, isUploading, isSettingsOpen, isHistoryOpen, isPrivacyOpen, previewFile, updateState.isOpen, isScannerOpen]);
 
   useEffect(() => {
     localStorage.setItem('easysubmit_my_ids', JSON.stringify(myCreatedIds));
@@ -649,6 +679,11 @@ export default function App() {
     }
   };
 
+  const handleScanComplete = (scannedFiles) => {
+    setFiles((prev) => [...prev, ...scannedFiles]);
+    triggerNotification('success', `${scannedFiles.length} document page(s) attached from scanner.`);
+  };
+
   const handleRemoveFile = (indexToRemove) => {
     setFiles((prev) => prev.filter((_, idx) => idx !== indexToRemove));
   };
@@ -749,6 +784,15 @@ export default function App() {
       return;
     }
 
+    if (!navigator.onLine) {
+      addToOfflineQueue({ fullName, section, subject, submissionType, customSubmissionName, files });
+      triggerNotification('warning', 'Offline Mode: Saved to upload queue. Will submit when back online.');
+      if (Capacitor.isNativePlatform()) {
+        triggerLocalNotification("EasySubmit Offline Queue", "Submission saved. Will upload automatically when connected.");
+      }
+      return;
+    }
+
     setIsUploading(true);
     setUploadError('');
     setCompletedCount(0);
@@ -832,6 +876,10 @@ export default function App() {
 
       setReceiptData(newReceipt);
       await saveHistoryItem(newReceipt);
+
+      if (Capacitor.isNativePlatform()) {
+        triggerLocalNotification("EasySubmit Submission Success", `Uploaded ${uploadedResults.length} file(s) to Google Drive.`);
+      }
 
       setFiles([]);
       await clearFilesFromDB();
@@ -1050,14 +1098,27 @@ export default function App() {
             </div>
 
             <div className="bg-white/5 border border-white/10 rounded-3xl p-5 sm:p-6 backdrop-blur-2xl space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-cyan-600/30 text-cyan-400 border border-cyan-500/40 flex items-center justify-center font-bold text-xs shadow-md">
-                  3
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-cyan-600/30 text-cyan-400 border border-cyan-500/40 flex items-center justify-center font-bold text-xs shadow-md">
+                    3
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-white">Select School Files</h3>
+                    <p className="text-[11px] text-slate-400">Drag & drop or tap to choose files from your device</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-sm font-bold text-white">Select School Files</h3>
-                  <p className="text-[11px] text-slate-400">Drag & drop or tap to choose files from your device</p>
-                </div>
+
+                {Capacitor.isNativePlatform() && (
+                  <button
+                    type="button"
+                    onClick={() => setIsScannerOpen(true)}
+                    className="px-3.5 py-2 bg-gradient-to-r from-blue-600 to-cyan-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-cyan-500/20 active:scale-95 transition"
+                  >
+                    <Camera className="w-4 h-4" />
+                    <span>Scan Paper / Doc</span>
+                  </button>
+                )}
               </div>
 
               <div 
@@ -1295,6 +1356,11 @@ export default function App() {
         isOpen={Boolean(previewFile)}
         onClose={() => setPreviewFile(null)}
         file={previewFile}
+      />
+      <DocumentScannerModal
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onScanComplete={handleScanComplete}
       />
     </div>
   );
