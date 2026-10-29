@@ -158,7 +158,20 @@ export default function App() {
     }
   });
 
-  const [historyList, setHistoryList] = useState([]);
+  const [historyList, setHistoryList] = useState(() => {
+    try {
+      const savedUser = localStorage.getItem('easysubmit_user');
+      const parsedUser = savedUser ? JSON.parse(savedUser) : null;
+      if (parsedUser?.email) {
+        const localHist = localStorage.getItem(`easysubmit_history_${parsedUser.email.toLowerCase()}`);
+        if (localHist) return JSON.parse(localHist);
+      }
+      const globalHist = localStorage.getItem('easysubmit_global_history');
+      return globalHist ? JSON.parse(globalHist) : [];
+    } catch {
+      return [];
+    }
+  });
 
   const [driveInput, setDriveInput] = useState(() => localStorage.getItem('easysubmit_draft_drive_input') || '');
   const [activeFolderId, setActiveFolderId] = useState('');
@@ -211,26 +224,28 @@ export default function App() {
       }
     });
 
-    const verifyAppVersion = async () => {
-      const updateRes = await checkForAppUpdates();
-      if (updateRes.hasUpdate) {
-        let firstDetected = localStorage.getItem('easysubmit_update_first_seen');
-        if (!firstDetected) {
-          firstDetected = Date.now().toString();
-          localStorage.setItem('easysubmit_update_first_seen', firstDetected);
+    if (Capacitor.isNativePlatform()) {
+      const verifyAppVersion = async () => {
+        const updateRes = await checkForAppUpdates();
+        if (updateRes.hasUpdate) {
+          let firstDetected = localStorage.getItem('easysubmit_update_first_seen');
+          if (!firstDetected) {
+            firstDetected = Date.now().toString();
+            localStorage.setItem('easysubmit_update_first_seen', firstDetected);
+          }
+
+          const elapsedDays = (Date.now() - parseInt(firstDetected, 10)) / (1000 * 60 * 60 * 24);
+
+          if (elapsedDays >= 3) {
+            setUpdateState({ isOpen: true, isForced: true, apkUrl: updateRes.downloadUrl });
+          } else if (elapsedDays >= 2) {
+            setUpdateState({ isOpen: true, isForced: false, apkUrl: updateRes.downloadUrl });
+          }
         }
+      };
 
-        const elapsedDays = (Date.now() - parseInt(firstDetected, 10)) / (1000 * 60 * 60 * 24);
-
-        if (elapsedDays >= 3) {
-          setUpdateState({ isOpen: true, isForced: true, apkUrl: updateRes.downloadUrl });
-        } else if (elapsedDays >= 2) {
-          setUpdateState({ isOpen: true, isForced: false, apkUrl: updateRes.downloadUrl });
-        }
-      }
-    };
-
-    verifyAppVersion();
+      verifyAppVersion();
+    }
   }, []);
 
   useEffect(() => {
@@ -325,8 +340,9 @@ export default function App() {
 
       try {
         const cloudData = await fetchCloudHistory(accessToken);
-        if (isMounted && Array.isArray(cloudData)) {
+        if (isMounted && Array.isArray(cloudData) && cloudData.length > 0) {
           setHistoryList(cloudData);
+          localStorage.setItem('easysubmit_global_history', JSON.stringify(cloudData));
           if (user?.email) {
             localStorage.setItem(`easysubmit_history_${user.email.toLowerCase()}`, JSON.stringify(cloudData));
           }
@@ -375,6 +391,7 @@ export default function App() {
   const saveHistoryItem = async (newItem) => {
     const updated = [newItem, ...historyList];
     setHistoryList(updated);
+    localStorage.setItem('easysubmit_global_history', JSON.stringify(updated));
     if (user?.email) {
       localStorage.setItem(`easysubmit_history_${user.email.toLowerCase()}`, JSON.stringify(updated));
     }
@@ -385,6 +402,7 @@ export default function App() {
 
   const handleClearHistory = async () => {
     setHistoryList([]);
+    localStorage.removeItem('easysubmit_global_history');
     if (user?.email) {
       localStorage.removeItem(`easysubmit_history_${user.email.toLowerCase()}`);
     }
@@ -396,6 +414,7 @@ export default function App() {
   const handleDeleteHistoryItem = async (indexToDelete) => {
     const updated = historyList.filter((_, idx) => idx !== indexToDelete);
     setHistoryList(updated);
+    localStorage.setItem('easysubmit_global_history', JSON.stringify(updated));
     if (user?.email) {
       localStorage.setItem(`easysubmit_history_${user.email.toLowerCase()}`, JSON.stringify(updated));
     }
@@ -410,6 +429,7 @@ export default function App() {
         client_id: GOOGLE_CLIENT_ID,
         scope: 'email profile https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.appdata',
         callback: async (response) => {
+          setIsConnectingDrive(false);
           if (response.error) {
             console.error(response);
             triggerNotification('warning', 'Google Auth Connection failed.');
@@ -474,35 +494,41 @@ export default function App() {
         } else {
           triggerNotification('warning', 'Google Sign-In failed or was canceled.');
         }
+        setIsConnectingDrive(false);
       } else {
+        if (!tokenClientRef.current) {
+          initGoogleClient();
+        }
         if (tokenClientRef.current) {
           tokenClientRef.current.requestAccessToken({ prompt: isReconnect ? 'consent' : '' });
-        } else if (window.google?.accounts?.oauth2) {
-          if (initGoogleClient()) {
-            tokenClientRef.current.requestAccessToken({ prompt: isReconnect ? 'consent' : '' });
-          }
         } else {
-          triggerNotification('warning', 'Google SDK is taking longer to load. Please check your network connection.');
+          setIsConnectingDrive(false);
+          triggerNotification('warning', 'Google SDK is taking longer to load. Please try again.');
         }
       }
     } catch (err) {
-      triggerNotification('warning', 'Connection error. Please try again.');
-    } finally {
       setIsConnectingDrive(false);
+      triggerNotification('warning', 'Connection error. Please try again.');
     }
   };
 
   const handleSignOut = async () => {
-    if (Capacitor.isNativePlatform()) {
-      await signOutGoogle();
-    } else if (accessToken) {
-      await revokeGoogleToken(accessToken);
-    }
     setUser(null);
     setAccessToken(null);
-    setHistoryList([]);
     localStorage.removeItem('easysubmit_token');
     localStorage.removeItem('easysubmit_user');
+
+    if (Capacitor.isNativePlatform()) {
+      await signOutGoogle();
+    } else {
+      if (window.google?.accounts?.id) {
+        window.google.accounts.id.disableAutoSelect();
+      }
+      if (accessToken) {
+        revokeGoogleToken(accessToken).catch(() => {});
+      }
+    }
+    triggerNotification('success', 'Signed out successfully');
   };
 
   useEffect(() => {
@@ -661,13 +687,13 @@ export default function App() {
   };
 
   const handleTouchStart = (e) => {
-    if (window.scrollY === 0) {
+    if (Capacitor.isNativePlatform() && window.scrollY === 0) {
       touchStartY.current = e.touches[0].clientY;
     }
   };
 
   const handleTouchMove = (e) => {
-    if (window.scrollY === 0 && pullState !== 'refreshing') {
+    if (Capacitor.isNativePlatform() && window.scrollY === 0 && pullState !== 'refreshing') {
       const touchY = e.touches[0].clientY;
       const diff = touchY - touchStartY.current;
       if (diff > 0) {
@@ -679,6 +705,7 @@ export default function App() {
   };
 
   const handleTouchEnd = () => {
+    if (!Capacitor.isNativePlatform()) return;
     if (pullProgress >= 0.8) {
       setPullState('refreshing');
       const targetFolder = currentFolderId || activeFolderId;
@@ -833,14 +860,16 @@ export default function App() {
     >
       <NetworkModal />
       <NotificationToast notification={toastNotification} onClose={() => setToastNotification(null)} />
-      <UpdateModal
-        isOpen={updateState.isOpen}
-        isForced={updateState.isForced}
-        onConfirm={() => downloadAndInstallApk(updateState.apkUrl)}
-        onCancel={() => setUpdateState((prev) => ({ ...prev, isOpen: false }))}
-      />
+      {Capacitor.isNativePlatform() && (
+        <UpdateModal
+          isOpen={updateState.isOpen}
+          isForced={updateState.isForced}
+          onConfirm={() => downloadAndInstallApk(updateState.apkUrl)}
+          onCancel={() => setUpdateState((prev) => ({ ...prev, isOpen: false }))}
+        />
+      )}
 
-      {pullState !== 'idle' && (
+      {Capacitor.isNativePlatform() && pullState !== 'idle' && (
         <div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center select-none transition-all duration-200">
           <div className="w-12 h-1 bg-slate-700/50 rounded-full mb-3" />
           <div className="w-12 h-12 rounded-full bg-gradient-to-b from-blue-600/30 to-cyan-500/10 border border-cyan-400/40 backdrop-blur-xl flex items-center justify-center shadow-[0_0_20px_rgba(34,211,238,0.3)]">
@@ -872,7 +901,7 @@ export default function App() {
         onConnectDrive={() => handleConnectDrive(false)}
         onSignOut={handleSignOut}
         onOpenHistory={() => setIsHistoryOpen(true)}
-        onOpenHelp={() => setIsHelpOpen(false)}
+        onOpenHelp={() => setIsHelpOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
       />
 
@@ -1134,7 +1163,7 @@ export default function App() {
                 className="w-full py-2.5 bg-blue-600/30 hover:bg-blue-600/50 text-cyan-300 border border-blue-500/30 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${isConnectingDrive ? 'animate-spin' : ''}`} />
-                <span>{isConnectingDrive ? 'Connecting...' : 'Reconnect Drive'}</span>
+                <span>{isConnectingDrive ? 'Connecting...' : 'Connect Drive'}</span>
               </button>
             )}
           </div>
@@ -1206,7 +1235,7 @@ export default function App() {
 
       </div>
 
-      <footer className="w-full text-center py-6 text-xs text-slate-400 border-t border-white/5 relative z-10 space-y-2">
+      <footer className="w-full text-center py-6 text-xs text-slate-400 border-t border-white/5 relative z-10 space-y-2 select-none">
         <p>EasySubmit • Direct School Submission Portal</p>
         <div className="flex items-center justify-center gap-4 text-[11px]">
           <button
@@ -1221,7 +1250,8 @@ export default function App() {
             href="https://www.facebook.com/arnelcoraldeMA"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-cyan-400 hover:underline font-semibold"
+            draggable="false"
+            className="text-cyan-400 hover:underline font-semibold select-none inline-block touch-manipulation pointer-events-auto"
           >
             Created By NatsumiKieko
           </a>

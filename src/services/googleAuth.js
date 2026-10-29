@@ -26,22 +26,29 @@ export const signInWithGoogle = async (isReconnect = false) => {
         try {
           await GoogleAuth.signOut();
         } catch (e) {}
+      } else {
+        try {
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Silent refresh timeout')), 2500)
+          );
+          const silentUser = await Promise.race([
+            GoogleAuth.refresh(),
+            timeoutPromise
+          ]);
+          
+          const silentToken = silentUser?.authentication?.accessToken || silentUser?.authentication?.idToken;
+          if (silentToken) {
+            return {
+              success: true,
+              email: silentUser.email,
+              name: silentUser.displayName || silentUser.givenName,
+              accessToken: silentToken,
+              idToken: silentUser.authentication?.idToken,
+              user: silentUser
+            };
+          }
+        } catch (silentErr) {}
       }
-
-      try {
-        const silentUser = await GoogleAuth.refresh();
-        const silentToken = silentUser?.authentication?.accessToken || silentUser?.authentication?.idToken;
-        if (silentToken) {
-          return {
-            success: true,
-            email: silentUser.email,
-            name: silentUser.displayName || silentUser.givenName,
-            accessToken: silentToken,
-            idToken: silentUser.authentication?.idToken,
-            user: silentUser
-          };
-        }
-      } catch (silentErr) {}
     }
 
     const googleUser = await GoogleAuth.signIn();

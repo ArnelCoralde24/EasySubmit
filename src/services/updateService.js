@@ -1,10 +1,11 @@
 import { Capacitor, CapacitorHttp } from '@capacitor/core';
-import { AppLauncher } from '@capacitor/app-launcher';
 import pkg from '../../package.json';
 
 export const CURRENT_APP_VERSION = pkg.version || "1.0.8";
 const GITHUB_OWNER = "ArnelCoralde24";
 const GITHUB_REPO = "EasySubmit";
+
+const MASKED_WORKER_DOWNLOAD_URL = "https://easysubmit-download.skyvault.workers.dev/";
 
 let isDownloadInProgress = false;
 
@@ -47,18 +48,13 @@ export const checkForAppUpdates = async () => {
       const cleanLatest = rawLatestTag.replace(/[^0-9.]/g, ''); 
       const cleanCurrent = CURRENT_APP_VERSION.replace(/[^0-9.]/g, ''); 
 
-      const apkAsset = responseData.assets?.find((asset) => 
-        asset.name && asset.name.toLowerCase().endsWith('.apk')
-      );
-      const downloadUrl = apkAsset ? apkAsset.browser_download_url : responseData.html_url;
-
       const hasUpdateAvailable = compareVersions(cleanCurrent, cleanLatest) < 0;
 
       if (hasUpdateAvailable) {
         return {
           hasUpdate: true,
           latestVersion: rawLatestTag,
-          downloadUrl: downloadUrl,
+          downloadUrl: MASKED_WORKER_DOWNLOAD_URL,
           releaseNotes: responseData.body || "A new version is available with improved features and bug fixes.",
           message: `🚀 Please Update to New Version`
         };
@@ -95,22 +91,32 @@ const compareVersions = (v1, v2) => {
 };
 
 export const downloadAndInstallApk = async (downloadUrl, onStatusChange) => {
-  if (!downloadUrl || isDownloadInProgress) return;
+  const targetUrl = downloadUrl || MASKED_WORKER_DOWNLOAD_URL;
+  if (!targetUrl || isDownloadInProgress) return;
 
   try {
     isDownloadInProgress = true;
     if (onStatusChange) onStatusChange('downloading');
 
-    if (Capacitor.isNativePlatform()) {
-      await AppLauncher.openUrl({ url: downloadUrl });
-    } else {
-      window.open(downloadUrl, '_blank');
-    }
+    const response = await fetch(targetUrl);
+    if (!response.ok) throw new Error("Download request failed");
+
+    const blob = await response.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = blobUrl;
+    a.download = 'EasySubmit.apk';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
 
     setTimeout(() => {
+      window.URL.revokeObjectURL(blobUrl);
       isDownloadInProgress = false;
       if (onStatusChange) onStatusChange('idle');
-    }, 3000);
+    }, 1000);
 
   } catch (error) {
     console.error('Download error:', error);
