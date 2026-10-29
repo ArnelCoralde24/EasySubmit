@@ -1,34 +1,47 @@
 import React, { useState, useEffect } from 'react';
 import { Capacitor } from '@capacitor/core';
+import { Network } from '@capacitor/network';
 import { WifiOff, RotateCw, X } from 'lucide-react';
 
 export const NetworkModal = () => {
   const [isOffline, setIsOffline] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
 
-  const checkConnection = async () => {
-    if (!Capacitor.isNativePlatform()) return;
-
-    setIsChecking(true);
-    
-    if (!navigator.onLine) {
-      setIsOffline(true);
-      setIsChecking(false);
-      return;
-    }
-
+  const verifyConnectionProbe = async () => {
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 4000);
-      
+
       await fetch('https://clients3.google.com/generate_204', {
         method: 'HEAD',
         mode: 'no-cors',
         cache: 'no-store',
         signal: controller.signal
       });
+
       clearTimeout(timeoutId);
-      setIsOffline(false);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const checkConnection = async () => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    setIsChecking(true);
+
+    try {
+      const status = await Network.getStatus();
+
+      if (!status.connected) {
+        setIsOffline(true);
+        setIsChecking(false);
+        return;
+      }
+
+      const hasInternetAccess = await verifyConnectionProbe();
+      setIsOffline(!hasInternetAccess);
     } catch {
       setIsOffline(true);
     } finally {
@@ -41,6 +54,18 @@ export const NetworkModal = () => {
 
     checkConnection();
 
+    let networkListenerHandle;
+
+    Network.addListener('networkStatusChange', (status) => {
+      if (!status.connected) {
+        setIsOffline(true);
+      } else {
+        checkConnection();
+      }
+    }).then(handle => {
+      networkListenerHandle = handle;
+    });
+
     const handleOnline = () => checkConnection();
     const handleOffline = () => setIsOffline(true);
 
@@ -48,26 +73,37 @@ export const NetworkModal = () => {
     window.addEventListener('offline', handleOffline);
 
     return () => {
+      if (networkListenerHandle) networkListenerHandle.remove();
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
 
+  useEffect(() => {
+    if (isOffline) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
+    } else {
+      document.body.style.overflow = 'unset';
+      document.body.style.touchAction = 'auto';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+      document.body.style.touchAction = 'auto';
+    };
+  }, [isOffline]);
+
   if (!Capacitor.isNativePlatform() || !isOffline) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md transition-all duration-300">
-      <div className="relative w-full max-w-sm rounded-3xl p-8 text-center shadow-2xl overflow-hidden border border-cyan-400/30 bg-gradient-to-b from-slate-900/80 via-indigo-950/70 to-slate-950/90 backdrop-blur-xl shadow-cyan-500/10">
+    <div 
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-lg transition-all duration-300 select-none"
+      onTouchMove={(e) => e.preventDefault()}
+    >
+      <div className="relative w-full max-w-sm rounded-3xl p-8 text-center shadow-2xl overflow-hidden border border-cyan-400/30 bg-gradient-to-b from-slate-900/90 via-indigo-950/80 to-slate-950/95 backdrop-blur-xl shadow-cyan-500/10">
         
         <div className="absolute -top-12 -left-12 w-32 h-32 bg-cyan-500/20 rounded-full blur-2xl pointer-events-none" />
         <div className="absolute -bottom-12 -right-12 w-32 h-32 bg-blue-600/20 rounded-full blur-2xl pointer-events-none" />
-
-        <button 
-          onClick={() => setIsOffline(false)}
-          className="absolute top-5 right-5 text-slate-400 hover:text-white transition-colors"
-        >
-          <X className="w-5 h-5" />
-        </button>
 
         <div className="relative mx-auto mb-6 flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-b from-cyan-400/20 to-blue-600/10 border border-cyan-300/30 shadow-inner">
           <div className="relative">

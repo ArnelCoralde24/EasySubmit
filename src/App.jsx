@@ -35,6 +35,76 @@ const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY || "";
 const ALLOWED_EXTENSIONS = ['pdf', 'docx', 'doc', 'pptx', 'ppt', 'xlsx', 'xls', 'txt', 'png', 'jpg', 'jpeg', 'zip', 'rar'];
 const DANGEROUS_EXTENSIONS = ['exe', 'bat', 'cmd', 'sh', 'vbs', 'js', 'jsx', 'ts', 'tsx', 'py', 'php', 'jar', 'apk', 'iso', 'scr'];
 
+const DB_NAME = 'EasySubmitDB';
+const STORE_NAME = 'draftFiles';
+
+const initDB = () => {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, 1);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME);
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+};
+
+const saveFilesToDB = async (filesList) => {
+  try {
+    const db = await initDB();
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    const serializedFiles = await Promise.all(
+      filesList.map(async (file) => ({
+        name: file.name,
+        type: file.type,
+        lastModified: file.lastModified,
+        buffer: await file.arrayBuffer()
+      }))
+    );
+    store.put(serializedFiles, 'savedFiles');
+  } catch (e) {
+    console.error("Failed to save files to IndexedDB", e);
+  }
+};
+
+const loadFilesFromDB = async () => {
+  try {
+    const db = await initDB();
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const store = tx.objectStore(STORE_NAME);
+    return new Promise((resolve) => {
+      const request = store.get('savedFiles');
+      request.onsuccess = () => {
+        if (request.result && Array.isArray(request.result)) {
+          const restored = request.result.map(
+            (item) => new File([item.buffer], item.name, { type: item.type, lastModified: item.lastModified })
+          );
+          resolve(restored);
+        } else {
+          resolve([]);
+        }
+      };
+      request.onerror = () => resolve([]);
+    });
+  } catch {
+    return [];
+  }
+};
+
+const clearFilesFromDB = async () => {
+  try {
+    const db = await initDB();
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).delete('savedFiles');
+  } catch (e) {
+    console.error("Failed to clear files from IndexedDB", e);
+  }
+};
+
 export default function App() {
   const fileInputRef = useRef(null);
   const tokenClientRef = useRef(null);
@@ -123,6 +193,11 @@ export default function App() {
   useEffect(() => {
     document.documentElement.classList.add('dark');
     initGoogleAuth();
+    loadFilesFromDB().then((restoredFiles) => {
+      if (restoredFiles.length > 0) {
+        setFiles(restoredFiles);
+      }
+    });
   }, []);
 
   useEffect(() => {
@@ -131,6 +206,14 @@ export default function App() {
     localStorage.setItem('easysubmit_draft_subject', subject);
     localStorage.setItem('easysubmit_draft_drive_input', driveInput);
   }, [fullName, section, subject, driveInput]);
+
+  useEffect(() => {
+    if (files.length > 0) {
+      saveFilesToDB(files);
+    } else {
+      clearFilesFromDB();
+    }
+  }, [files]);
 
   const loadFolderItems = useCallback(async (targetId, silent = false) => {
     if (!accessToken || !targetId) return;
@@ -496,6 +579,11 @@ export default function App() {
     setFiles((prev) => prev.filter((_, idx) => idx !== indexToRemove));
   };
 
+  const handleClearAllFiles = () => {
+    setFiles([]);
+    clearFilesFromDB();
+  };
+
   const handlePaste = async () => {
     try {
       if (Capacitor.isNativePlatform()) {
@@ -657,6 +745,7 @@ export default function App() {
       await saveHistoryItem(newReceipt);
 
       setFiles([]);
+      await clearFilesFromDB();
       localStorage.removeItem('easysubmit_draft_name');
       localStorage.removeItem('easysubmit_draft_section');
       localStorage.removeItem('easysubmit_draft_subject');
@@ -671,7 +760,7 @@ export default function App() {
     }
   };
 
-  const hasFormDraft = Boolean(fullName.trim() || section.trim() || subject.trim());
+  const hasFormDraft = Boolean(fullName.trim() || section.trim() || subject.trim() || files.length > 0);
 
   return (
     <div 
@@ -883,7 +972,7 @@ export default function App() {
                 <div className="space-y-2 pt-2 text-xs">
                   <div className="flex justify-between items-center">
                     <span className="font-bold text-slate-300">Selected Files ({files.length})</span>
-                    <button type="button" onClick={() => setFiles([])} className="text-red-400 hover:underline font-semibold text-[11px]">Clear All</button>
+                    <button type="button" onClick={handleClearAllFiles} className="text-red-400 hover:underline font-semibold text-[11px]">Clear All</button>
                   </div>
                   <div className="space-y-1.5 max-h-40 overflow-y-auto">
                     {files.map((file, idx) => (
