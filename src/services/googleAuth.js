@@ -13,7 +13,7 @@ export const initGoogleAuth = () => {
   }
 };
 
-export const signInWithGoogle = async () => {
+export const signInWithGoogle = async (isReconnect = false) => {
   try {
     if (Capacitor.isNativePlatform()) {
       GoogleAuth.initialize({
@@ -21,6 +21,27 @@ export const signInWithGoogle = async () => {
         scopes: ['profile', 'email', 'https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/drive.readonly', 'https://www.googleapis.com/auth/drive.appdata'],
         grantOfflineAccess: true,
       });
+
+      if (isReconnect) {
+        try {
+          await GoogleAuth.signOut();
+        } catch (e) {}
+      }
+
+      try {
+        const silentUser = await GoogleAuth.refresh();
+        const silentToken = silentUser?.authentication?.accessToken || silentUser?.authentication?.idToken;
+        if (silentToken) {
+          return {
+            success: true,
+            email: silentUser.email,
+            name: silentUser.displayName || silentUser.givenName,
+            accessToken: silentToken,
+            idToken: silentUser.authentication?.idToken,
+            user: silentUser
+          };
+        }
+      } catch (silentErr) {}
     }
 
     const googleUser = await GoogleAuth.signIn();

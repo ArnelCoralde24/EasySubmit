@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { 
   BookOpen, FileCheck, Package, UploadCloud, Send, Link2, Clipboard as ClipboardIcon, X,
   FileText, Trash2, Users, RefreshCw, MinusCircle, Home,
-  FolderOpen, ShieldCheck, Sliders, Clock, Eye, Save
+  FolderOpen, ShieldCheck, Sliders, Clock, Eye, Save, Check
 } from "lucide-react";
 import { Clipboard } from '@capacitor/clipboard';
 import { Capacitor } from '@capacitor/core';
@@ -16,6 +16,9 @@ import HistoryModal from './components/HistoryModal';
 import PrivacyModal from './components/PrivacyModal';
 import FilePreviewModal from './components/FilePreviewModal';
 import { NetworkModal } from './components/NetworkModal';
+import { NotificationToast } from './components/NotificationToast';
+import { UpdateModal } from './components/UpdateModal';
+import { checkForAppUpdates, downloadAndInstallApk } from './services/updateService';
 import { initGoogleAuth, signInWithGoogle, signOutGoogle } from './services/googleAuth';
 import { 
   extractFolderId, 
@@ -180,6 +183,7 @@ export default function App() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isConnectingDrive, setIsConnectingDrive] = useState(false);
 
   const [uploadProgress, setUploadProgress] = useState(0);
   const [currentUploadingFile, setCurrentUploadingFile] = useState('');
@@ -187,8 +191,16 @@ export default function App() {
   const [uploadError, setUploadError] = useState('');
   const [receiptData, setReceiptData] = useState(null);
 
-  const [isPulling, setIsPulling] = useState(false);
+  const [toastNotification, setToastNotification] = useState(null);
+  const [updateState, setUpdateState] = useState({ isOpen: false, isForced: false, apkUrl: '' });
+
+  const [pullProgress, setPullProgress] = useState(0);
+  const [pullState, setPullState] = useState('idle');
   const touchStartY = useRef(0);
+
+  const triggerNotification = (type, message) => {
+    setToastNotification({ type, message });
+  };
 
   useEffect(() => {
     document.documentElement.classList.add('dark');
@@ -198,6 +210,27 @@ export default function App() {
         setFiles(restoredFiles);
       }
     });
+
+    const verifyAppVersion = async () => {
+      const updateRes = await checkForAppUpdates();
+      if (updateRes.hasUpdate) {
+        let firstDetected = localStorage.getItem('easysubmit_update_first_seen');
+        if (!firstDetected) {
+          firstDetected = Date.now().toString();
+          localStorage.setItem('easysubmit_update_first_seen', firstDetected);
+        }
+
+        const elapsedDays = (Date.now() - parseInt(firstDetected, 10)) / (1000 * 60 * 60 * 24);
+
+        if (elapsedDays >= 3) {
+          setUpdateState({ isOpen: true, isForced: true, apkUrl: updateRes.downloadUrl });
+        } else if (elapsedDays >= 2) {
+          setUpdateState({ isOpen: true, isForced: false, apkUrl: updateRes.downloadUrl });
+        }
+      }
+    };
+
+    verifyAppVersion();
   }, []);
 
   useEffect(() => {
@@ -236,7 +269,7 @@ export default function App() {
   const handleVerifyFolder = useCallback((folderLinkOrId) => {
     if (!folderLinkOrId) return;
     if (folderLinkOrId.includes('http') && !folderLinkOrId.includes('drive.google.com')) {
-      alert('Security Protection: Tanging official Google Drive links lamang ang tinatanggap.');
+      triggerNotification('warning', 'Security Protection: Tanging official Google Drive links lamang ang tinatanggap.');
       return;
     }
 
@@ -265,7 +298,7 @@ export default function App() {
   }, [driveInput, accessToken, loadFolderItems]);
 
   useEffect(() => {
-    if (isHelpOpen || receiptData || isUploading || isSettingsOpen || isHistoryOpen || isPrivacyOpen || previewFile) {
+    if (isHelpOpen || receiptData || isUploading || isSettingsOpen || isHistoryOpen || isPrivacyOpen || previewFile || updateState.isOpen) {
       document.body.style.overflow = 'hidden';
       window.scrollTo({ top: 0, behavior: 'instant' });
     } else {
@@ -274,7 +307,7 @@ export default function App() {
     return () => {
       document.body.style.overflow = 'unset';
     };
-  }, [isHelpOpen, receiptData, isUploading, isSettingsOpen, isHistoryOpen, isPrivacyOpen, previewFile]);
+  }, [isHelpOpen, receiptData, isUploading, isSettingsOpen, isHistoryOpen, isPrivacyOpen, previewFile, updateState.isOpen]);
 
   useEffect(() => {
     localStorage.setItem('easysubmit_my_ids', JSON.stringify(myCreatedIds));
@@ -325,7 +358,7 @@ export default function App() {
       const timeoutMs = (settings.autoLockMinutes || 15) * 60 * 1000;
       inactivityTimerRef.current = setTimeout(() => {
         handleSignOut();
-        alert(`Session Auto-Locked: Signed out after ${settings.autoLockMinutes || 15} minutes of inactivity.`);
+        triggerNotification('warning', `Session Auto-Locked: Signed out after ${settings.autoLockMinutes || 15} minutes of inactivity.`);
       }, timeoutMs);
     };
 
@@ -379,7 +412,7 @@ export default function App() {
         callback: async (response) => {
           if (response.error) {
             console.error(response);
-            alert('Google Auth Connection failed.');
+            triggerNotification('warning', 'Google Auth Connection failed.');
             return;
           }
           if (response.access_token) {
@@ -417,33 +450,45 @@ export default function App() {
     }
   }, [initGoogleClient]);
 
-  const handleConnectDrive = async () => {
-    if (Capacitor.isNativePlatform()) {
-      const result = await signInWithGoogle();
-      if (result.success) {
-        setAccessToken(result.accessToken || result.idToken);
-        localStorage.setItem('easysubmit_token', result.accessToken || result.idToken);
+  const handleConnectDrive = async (isReconnect = false) => {
+    if (isConnectingDrive) return;
+    setIsConnectingDrive(true);
 
-        const userData = {
-          name: result.name || 'Connected User',
-          email: result.email || '',
-          picture: result.user?.imageUrl || ''
-        };
-        setUser(userData);
-        localStorage.setItem('easysubmit_user', JSON.stringify(userData));
-      } else {
-        alert('Google Sign-In failed or was canceled.');
-      }
-    } else {
-      if (tokenClientRef.current) {
-        tokenClientRef.current.requestAccessToken({ prompt: '' });
-      } else if (window.google?.accounts?.oauth2) {
-        if (initGoogleClient()) {
-          tokenClientRef.current.requestAccessToken({ prompt: '' });
+    try {
+      if (Capacitor.isNativePlatform()) {
+        const result = await signInWithGoogle(isReconnect);
+        if (result.success) {
+          const token = result.accessToken || result.idToken;
+          setAccessToken(token);
+          localStorage.setItem('easysubmit_token', token);
+
+          const userData = {
+            name: result.name || 'Connected User',
+            email: result.email || '',
+            picture: result.user?.imageUrl || ''
+          };
+          setUser(userData);
+          localStorage.setItem('easysubmit_user', JSON.stringify(userData));
+
+          triggerNotification('success', 'Google Drive connected successfully!');
+        } else {
+          triggerNotification('warning', 'Google Sign-In failed or was canceled.');
         }
       } else {
-        alert('Google SDK is taking longer to load. Please check your network connection and try again.');
+        if (tokenClientRef.current) {
+          tokenClientRef.current.requestAccessToken({ prompt: isReconnect ? 'consent' : '' });
+        } else if (window.google?.accounts?.oauth2) {
+          if (initGoogleClient()) {
+            tokenClientRef.current.requestAccessToken({ prompt: isReconnect ? 'consent' : '' });
+          }
+        } else {
+          triggerNotification('warning', 'Google SDK is taking longer to load. Please check your network connection.');
+        }
       }
+    } catch (err) {
+      triggerNotification('warning', 'Connection error. Please try again.');
+    } finally {
+      setIsConnectingDrive(false);
     }
   };
 
@@ -492,7 +537,7 @@ export default function App() {
       await deleteDriveItem(itemId, accessToken);
       await loadFolderItems(currentFolderId || activeFolderId, true);
     } catch (err) {
-      alert('Failed to delete item: ' + err.message);
+      triggerNotification('warning', 'Failed to delete item: ' + err.message);
       loadFolderItems(currentFolderId || activeFolderId);
     }
   };
@@ -542,23 +587,23 @@ export default function App() {
         const ext = parts.pop().toLowerCase();
 
         if (parts.length > 1 && DANGEROUS_EXTENSIONS.includes(parts.pop().toLowerCase())) {
-          alert(`Security Risk: Double extension detected on "${file.name}".`);
+          triggerNotification('warning', `Double extension detected on "${file.name}".`);
           continue;
         }
 
         if (!ALLOWED_EXTENSIONS.includes(ext) || DANGEROUS_EXTENSIONS.includes(ext)) {
-          alert(`Security Warning: Hindi pinapayagan ang ".${ext}" file type.`);
+          triggerNotification('warning', `Hindi pinapayagan ang ".${ext}" file type.`);
           continue;
         }
 
         if (settings.rateLimiting && file.size > 50 * 1024 * 1024) {
-          alert(`Security Limit: Ang file na "${file.name}" ay sobra sa 50MB limit.`);
+          triggerNotification('warning', `Ang file na "${file.name}" ay sobra sa 50MB limit.`);
           continue;
         }
 
         const isHeaderValid = await verifyFileMagicBytes(file);
         if (!isHeaderValid) {
-          alert(`Security Alert: Faked file structure detected on "${file.name}".`);
+          triggerNotification('warning', `Faked file structure detected on "${file.name}".`);
           continue;
         }
 
@@ -572,6 +617,9 @@ export default function App() {
       }
 
       setFiles((prev) => [...prev, ...safeFiles]);
+      if (safeFiles.length > 0) {
+        triggerNotification('success', `${safeFiles.length} file(s) selected successfully.`);
+      }
     }
   };
 
@@ -582,6 +630,7 @@ export default function App() {
   const handleClearAllFiles = () => {
     setFiles([]);
     clearFilesFromDB();
+    triggerNotification('success', 'Selected files cleared.');
   };
 
   const handlePaste = async () => {
@@ -598,7 +647,7 @@ export default function App() {
         handleVerifyFolder(text);
       }
     } catch (err) {
-      alert('Cannot access clipboard. Please paste manually into the input box.');
+      triggerNotification('warning', 'Cannot access clipboard. Please paste manually into the input box.');
     }
   };
 
@@ -618,21 +667,34 @@ export default function App() {
   };
 
   const handleTouchMove = (e) => {
-    if (window.scrollY === 0) {
+    if (window.scrollY === 0 && pullState !== 'refreshing') {
       const touchY = e.touches[0].clientY;
-      if (touchY - touchStartY.current > 80 && !isPulling) {
-        setIsPulling(true);
+      const diff = touchY - touchStartY.current;
+      if (diff > 0) {
+        const prog = Math.min(diff / 120, 1);
+        setPullProgress(prog);
+        setPullState(prog >= 1 ? 'ready' : 'pulling');
       }
     }
   };
 
   const handleTouchEnd = () => {
-    if (isPulling) {
+    if (pullProgress >= 0.8) {
+      setPullState('refreshing');
       const targetFolder = currentFolderId || activeFolderId;
       if (targetFolder && accessToken) {
         loadFolderItems(targetFolder);
       }
-      setTimeout(() => setIsPulling(false), 800);
+      setTimeout(() => {
+        setPullState('success');
+        setTimeout(() => {
+          setPullState('idle');
+          setPullProgress(0);
+        }, 800);
+      }, 1000);
+    } else {
+      setPullState('idle');
+      setPullProgress(0);
     }
   };
 
@@ -646,17 +708,17 @@ export default function App() {
   const handleSubmission = async (e) => {
     e.preventDefault();
     if (!accessToken) {
-      alert('Please connect your Google Drive account first.');
+      triggerNotification('warning', 'Please connect your Google Drive account first.');
       return;
     }
 
     if (!activeFolderId) {
-      alert('Please enter or verify a valid Google Drive link first.');
+      triggerNotification('warning', 'Please enter or verify a valid Google Drive link first.');
       return;
     }
 
     if (files.length === 0) {
-      alert('Please select at least one file to submit.');
+      triggerNotification('warning', 'Please select at least one file to submit.');
       return;
     }
 
@@ -673,7 +735,7 @@ export default function App() {
 
       if (!isAISafe) {
         setIsUploading(false);
-        alert('AI Guardrail Warning: Naharang ang iyong submission ng AI Security Scanner dahil sa pwedeng nakasasamang salita o script.');
+        triggerNotification('warning', 'AI Guardrail Warning: Naharang ang iyong submission ng AI Security Scanner.');
         return;
       }
 
@@ -770,11 +832,33 @@ export default function App() {
       className="min-h-screen w-full bg-[#050814] text-white flex flex-col font-sans relative overflow-x-hidden select-none"
     >
       <NetworkModal />
+      <NotificationToast notification={toastNotification} onClose={() => setToastNotification(null)} />
+      <UpdateModal
+        isOpen={updateState.isOpen}
+        isForced={updateState.isForced}
+        onConfirm={() => downloadAndInstallApk(updateState.apkUrl)}
+        onCancel={() => setUpdateState((prev) => ({ ...prev, isOpen: false }))}
+      />
 
-      {isPulling && (
-        <div className="fixed top-2 left-1/2 -translate-x-1/2 z-50 bg-blue-600/90 text-white text-xs px-4 py-1.5 rounded-full flex items-center gap-2 shadow-lg animate-bounce">
-          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-          <span>Refreshing app & Drive contents...</span>
+      {pullState !== 'idle' && (
+        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center select-none transition-all duration-200">
+          <div className="w-12 h-1 bg-slate-700/50 rounded-full mb-3" />
+          <div className="w-12 h-12 rounded-full bg-gradient-to-b from-blue-600/30 to-cyan-500/10 border border-cyan-400/40 backdrop-blur-xl flex items-center justify-center shadow-[0_0_20px_rgba(34,211,238,0.3)]">
+            {pullState === 'pulling' && (
+              <div className="w-5 h-5 border-2 border-cyan-400 border-t-transparent rounded-full" style={{ transform: `rotate(${pullProgress * 360}deg)` }} />
+            )}
+            {pullState === 'ready' && (
+              <RefreshCw className="w-5 h-5 text-cyan-300 animate-spin" />
+            )}
+            {pullState === 'refreshing' && (
+              <RefreshCw className="w-5 h-5 text-cyan-300 animate-spin" />
+            )}
+            {pullState === 'success' && (
+              <div className="flex items-center justify-center">
+                <Check className="w-6 h-6 text-emerald-400 stroke-[3]" />
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -785,10 +869,10 @@ export default function App() {
       <Header
         accessToken={accessToken}
         user={user}
-        onConnectDrive={handleConnectDrive}
+        onConnectDrive={() => handleConnectDrive(false)}
         onSignOut={handleSignOut}
         onOpenHistory={() => setIsHistoryOpen(true)}
-        onOpenHelp={() => setIsHelpOpen(true)}
+        onOpenHelp={() => setIsHelpOpen(false)}
         onOpenSettings={() => setIsSettingsOpen(true)}
       />
 
@@ -1045,10 +1129,12 @@ export default function App() {
             {!accessToken && (
               <button
                 type="button"
-                onClick={handleConnectDrive}
-                className="w-full py-2 bg-blue-600/30 hover:bg-blue-600/50 text-cyan-300 border border-blue-500/30 rounded-xl text-xs font-bold transition"
+                disabled={isConnectingDrive}
+                onClick={() => handleConnectDrive(true)}
+                className="w-full py-2.5 bg-blue-600/30 hover:bg-blue-600/50 text-cyan-300 border border-blue-500/30 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
               >
-                Reconnect Drive
+                <RefreshCw className={`w-3.5 h-3.5 ${isConnectingDrive ? 'animate-spin' : ''}`} />
+                <span>{isConnectingDrive ? 'Connecting...' : 'Reconnect Drive'}</span>
               </button>
             )}
           </div>

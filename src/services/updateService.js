@@ -2,7 +2,7 @@ import { Capacitor, CapacitorHttp } from '@capacitor/core';
 import { AppLauncher } from '@capacitor/app-launcher';
 import pkg from '../../package.json';
 
-export const CURRENT_APP_VERSION = pkg.version || "1.0.3";
+export const CURRENT_APP_VERSION = pkg.version || "1.0.8";
 const GITHUB_OWNER = "ArnelCoralde24";
 const GITHUB_REPO = "EasySubmit";
 
@@ -59,8 +59,8 @@ export const checkForAppUpdates = async () => {
           hasUpdate: true,
           latestVersion: rawLatestTag,
           downloadUrl: downloadUrl,
-          releaseNotes: responseData.body || "May bagong update na available para sa EasySubmit Mobile!",
-          message: `🚀 New Version Available: ${rawLatestTag}`
+          releaseNotes: responseData.body || "A new version is available with improved features and bug fixes.",
+          message: `🚀 Please Update to New Version`
         };
       }
     }
