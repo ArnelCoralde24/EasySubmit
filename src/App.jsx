@@ -16,12 +16,13 @@ import HistoryModal from './components/HistoryModal';
 import PrivacyModal from './components/PrivacyModal';
 import FilePreviewModal from './components/FilePreviewModal';
 import DocumentScannerModal from './components/DocumentScannerModal';
+import BiometricLockScreen from './components/BiometricLockScreen';
 import { NetworkModal } from './components/NetworkModal';
 import { NotificationToast } from './components/NotificationToast';
 import { UpdateModal } from './components/UpdateModal';
 import { checkForAppUpdates, downloadAndInstallApk } from './services/updateService';
 import { initGoogleAuth, signInWithGoogle, signOutGoogle } from './services/googleAuth';
-import { checkDeviceIntegrity, verifyBiometricAuth } from './services/securityService';
+import { checkDeviceIntegrity } from './services/securityService';
 import { addToOfflineQueue, triggerLocalNotification } from './services/queueService';
 import { 
   extractFolderId, 
@@ -205,6 +206,7 @@ export default function App() {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isConnectingDrive, setIsConnectingDrive] = useState(false);
+  const [isAppLocked, setIsAppLocked] = useState(false);
 
   const [uploadProgress, setUploadProgress] = useState(0);
   const [currentUploadingFile, setCurrentUploadingFile] = useState('');
@@ -235,11 +237,7 @@ export default function App() {
       });
 
       if (settings.biometricLock) {
-        verifyBiometricAuth().then((authenticated) => {
-          if (!authenticated) {
-            triggerNotification('warning', 'Biometric authentication failed or canceled.');
-          }
-        });
+        setIsAppLocked(true);
       }
     }
 
@@ -343,7 +341,7 @@ export default function App() {
   }, [driveInput, accessToken, loadFolderItems]);
 
   useEffect(() => {
-    if (isHelpOpen || receiptData || isUploading || isSettingsOpen || isHistoryOpen || isPrivacyOpen || previewFile || updateState.isOpen || isScannerOpen) {
+    if (isHelpOpen || receiptData || isUploading || isSettingsOpen || isHistoryOpen || isPrivacyOpen || previewFile || updateState.isOpen || isScannerOpen || isAppLocked) {
       document.body.style.overflow = 'hidden';
       window.scrollTo({ top: 0, behavior: 'instant' });
     } else {
@@ -352,7 +350,7 @@ export default function App() {
     return () => {
       document.body.style.overflow = 'unset';
     };
-  }, [isHelpOpen, receiptData, isUploading, isSettingsOpen, isHistoryOpen, isPrivacyOpen, previewFile, updateState.isOpen, isScannerOpen]);
+  }, [isHelpOpen, receiptData, isUploading, isSettingsOpen, isHistoryOpen, isPrivacyOpen, previewFile, updateState.isOpen, isScannerOpen, isAppLocked]);
 
   useEffect(() => {
     localStorage.setItem('easysubmit_my_ids', JSON.stringify(myCreatedIds));
@@ -906,6 +904,11 @@ export default function App() {
       onTouchEnd={handleTouchEnd}
       className="min-h-screen w-full bg-[#050814] text-white flex flex-col font-sans relative overflow-x-hidden select-none"
     >
+      <BiometricLockScreen
+        isOpen={isAppLocked}
+        onUnlockSuccess={() => setIsAppLocked(false)}
+      />
+
       <NetworkModal />
       <NotificationToast notification={toastNotification} onClose={() => setToastNotification(null)} />
       {Capacitor.isNativePlatform() && (
